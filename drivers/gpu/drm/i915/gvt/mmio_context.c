@@ -158,6 +158,35 @@ static struct {
 	u32 l3cc_table[GEN9_MOCS_SIZE / 2];
 } gen9_render_mocs;
 
+void intel_gvt_mark_noncontext_mmios(struct intel_gvt *gvt)
+{
+	uint32_t reg;
+	struct engine_mmio *mmio, *mmio_list;
+	int i;
+
+	for (i = 0; i < 64 * 5; i++) {
+		reg = GEN9_GFX_MOCS(i).reg;
+		intel_gvt_mmio_set_non_context(gvt, reg);
+	}
+
+	for (i = 0; i < 32; i++) {
+		reg = GEN9_LNCFCMOCS(i).reg;
+		intel_gvt_mmio_set_non_context(gvt, reg);
+	}
+
+	if (IS_SKYLAKE(gvt->dev_priv) || IS_KABYLAKE(gvt->dev_priv)
+		|| IS_BROXTON(gvt->dev_priv))
+		mmio_list = gen9_engine_mmio_list;
+	else
+		mmio_list = gen8_engine_mmio_list;
+
+	for (mmio = mmio_list; i915_mmio_reg_valid(mmio->reg); mmio++) {
+		if (mmio->in_context)
+			continue;
+		intel_gvt_mmio_set_non_context(gvt, mmio->reg.reg);
+	}
+}
+
 static void load_render_mocs(struct drm_i915_private *dev_priv)
 {
 	i915_reg_t offset;
@@ -573,6 +602,11 @@ void intel_gvt_switch_mmio(struct intel_vgpu *pre,
 void intel_gvt_init_engine_mmio_context(struct intel_gvt *gvt)
 {
 	struct engine_mmio *mmio;
+
+	gvt_dbg_mmio("traced %lu virtual mmio registers\n",
+		     gvt->mmio.num_tracked_mmio);
+
+	intel_gvt_mark_noncontext_mmios(gvt);
 
 	if (IS_SKYLAKE(gvt->dev_priv) || IS_KABYLAKE(gvt->dev_priv))
 		gvt->engine_mmio_list.mmio = gen9_engine_mmio_list;
