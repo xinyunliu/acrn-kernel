@@ -158,35 +158,6 @@ static struct {
 	u32 l3cc_table[GEN9_MOCS_SIZE / 2];
 } gen9_render_mocs;
 
-void intel_gvt_mark_noncontext_mmios(struct intel_gvt *gvt)
-{
-	uint32_t reg;
-	struct engine_mmio *mmio, *mmio_list;
-	int i;
-
-	for (i = 0; i < 64 * 5; i++) {
-		reg = GEN9_GFX_MOCS(i).reg;
-		intel_gvt_mmio_set_non_context(gvt, reg);
-	}
-
-	for (i = 0; i < 32; i++) {
-		reg = GEN9_LNCFCMOCS(i).reg;
-		intel_gvt_mmio_set_non_context(gvt, reg);
-	}
-
-	if (IS_SKYLAKE(gvt->dev_priv) || IS_KABYLAKE(gvt->dev_priv)
-		|| IS_BROXTON(gvt->dev_priv))
-		mmio_list = gen9_engine_mmio_list;
-	else
-		mmio_list = gen8_engine_mmio_list;
-
-	for (mmio = mmio_list; i915_mmio_reg_valid(mmio->reg); mmio++) {
-		if (mmio->in_context)
-			continue;
-		intel_gvt_mmio_set_non_context(gvt, mmio->reg.reg);
-	}
-}
-
 static void load_render_mocs(struct drm_i915_private *dev_priv)
 {
 	i915_reg_t offset;
@@ -594,6 +565,85 @@ void intel_gvt_switch_mmio(struct intel_vgpu *pre,
 	intel_runtime_pm_put(dev_priv);
 }
 
+#define gvt_host_reg(gvt, reg) 	\
+	(*(u32 *)(gvt->mmio.mmio_host_cache + reg))	\
+
+#define MMIO_COMPARE(vgpu, reg, mask) ({			\
+	int ret;						\
+	u32 value = vgpu_vreg(vgpu, reg);			\
+	u32 host_value = gvt_host_reg(vgpu->gvt, reg);		\
+								\
+	if (mask) {						\
+		value &= mask;					\
+		host_value &= mask;				\
+	}							\
+	if (host_value == value) {				\
+		ret = 0;					\
+	} else {						\
+		gvt_err("vgpu%d unconformance mmio 0x%x:0x%x,0x%x\n",	\
+			vgpu->id, reg,				\
+			vgpu_vreg(vgpu, reg),			\
+			gvt_host_reg(vgpu->gvt, reg));		\
+		ret = -EINVAL;					\
+	}							\
+	ret;							\
+	})
+
+static int noncontext_mmio_compare(struct intel_vgpu *vgpu, int ring_id)
+{
+	struct engine_mmio *mmio, *mmio_list;
+
+	mmio_list = vgpu->gvt->engine_mmio_list.mmio;
+
+	for (mmio = mmio_list; i915_mmio_reg_valid(mmio->reg); mmio++) {
+		if (mmio->ring_id != ring_id || mmio->in_context)
+			continue;
+
+		if (MMIO_COMPARE(vgpu, mmio->reg.reg, mmio->mask))
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+static void get_host_mmio_snapshot(struct intel_gvt *gvt)
+{
+	struct drm_i915_private *dev_priv = gvt->dev_priv;
+	struct engine_mmio *mmio, *mmio_list;
+
+	mmio_list = gvt->engine_mmio_list.mmio;
+
+	if (!gvt->mmio.host_cache_initialized) {
+		/* Snapshot all the non-context MMIOs */
+		for (mmio = mmio_list; i915_mmio_reg_valid(mmio->reg); mmio++) {
+			if (mmio->in_context)
+				continue;
+
+			gvt_host_reg(gvt, mmio->reg.reg) =
+				I915_READ_FW(mmio->reg);
+			if (mmio->mask)
+				gvt_host_reg(gvt, mmio->reg.reg) &= mmio->mask;
+		}
+		gvt->mmio.host_cache_initialized = true;
+	}
+}
+
+int intel_gvt_vgpu_conformance_check(struct intel_vgpu *vgpu, int ring_id)
+{
+	int ret;
+
+	get_host_mmio_snapshot(vgpu->gvt);
+
+	ret = noncontext_mmio_compare(vgpu, ring_id);
+	if (ret)
+		goto err;
+
+	return 0;
+err:
+	return ret;
+}
+
+
 /**
  * intel_gvt_init_engine_mmio_context - Initiate the engine mmio list
  * @gvt: GVT device
@@ -603,12 +653,8 @@ void intel_gvt_init_engine_mmio_context(struct intel_gvt *gvt)
 {
 	struct engine_mmio *mmio;
 
-	gvt_dbg_mmio("traced %lu virtual mmio registers\n",
-		     gvt->mmio.num_tracked_mmio);
-
-	intel_gvt_mark_noncontext_mmios(gvt);
-
-	if (IS_SKYLAKE(gvt->dev_priv) || IS_KABYLAKE(gvt->dev_priv))
+	if (IS_SKYLAKE(gvt->dev_priv) || IS_KABYLAKE(gvt->dev_priv)
+		||IS_BROXTON(gvt->dev_priv))
 		gvt->engine_mmio_list.mmio = gen9_engine_mmio_list;
 	else
 		gvt->engine_mmio_list.mmio = gen8_engine_mmio_list;
@@ -618,6 +664,8 @@ void intel_gvt_init_engine_mmio_context(struct intel_gvt *gvt)
 		if (mmio->in_context) {
 			gvt->engine_mmio_list.ctx_mmio_count[mmio->ring_id]++;
 			intel_gvt_mmio_set_in_ctx(gvt, mmio->reg.reg);
+		}else {
+			intel_gvt_mmio_set_non_context(gvt, mmio->reg.reg);
 		}
 	}
 }
