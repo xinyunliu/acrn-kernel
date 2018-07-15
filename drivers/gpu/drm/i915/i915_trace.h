@@ -1020,6 +1020,18 @@ DEFINE_EVENT(i915_context, i915_context_free,
 	TP_ARGS(ctx)
 );
 
+TRACE_EVENT(gep_log,
+	TP_PROTO(struct va_format *vaf),
+	TP_ARGS(vaf),
+	TP_STRUCT__entry(
+		__dynamic_array(char, msg, I915_GEP_LOG_MAX)
+	),
+	TP_fast_assign(
+		vsnprintf(__get_str(msg), I915_GEP_LOG_MAX, vaf->fmt, *vaf->va);
+	),
+	TP_printk("%s", __get_str(msg))
+);
+
 #endif /* _I915_TRACE_H_ */
 
 /* This part must be outside protection */

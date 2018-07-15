@@ -33,6 +33,7 @@
 #include "i915_scheduler.h"
 
 #include <uapi/drm/i915_drm.h>
+#include "i915_gep.h"
 
 struct drm_file;
 struct drm_i915_gem_object;
@@ -180,6 +181,8 @@ struct i915_request {
 	struct drm_i915_file_private *file_priv;
 	/** file_priv list entry for this request */
 	struct list_head client_link;
+
+	struct i915_gep_req gep_req;
 };
 
 #define I915_FENCE_GFP (GFP_KERNEL | __GFP_RETRY_MAYFAIL | __GFP_NOWARN)
