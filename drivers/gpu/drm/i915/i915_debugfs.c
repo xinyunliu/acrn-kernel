@@ -4567,6 +4567,33 @@ static int i915_sseu_status(struct seq_file *m, void *unused)
 	return 0;
 }
 
+static int
+i915_gep_enable_get(void *data, u64 *val)
+{
+	*val = (u64) i915_gep_is_enabled();
+	return 0;
+}
+
+static int
+i915_gep_enable_set(void *data, u64 val)
+{
+	struct drm_device *dev = data;
+	int ret;
+
+	ret = mutex_lock_interruptible(&dev->struct_mutex);
+	if (ret)
+		return ret;
+
+	ret = i915_gep_enable(dev, (bool)val);
+	mutex_unlock(&dev->struct_mutex);
+	return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(i915_gep_enable_fops,
+			i915_gep_enable_get,
+			i915_gep_enable_set,
+			"%lld\n");
+
 static int i915_forcewake_open(struct inode *inode, struct file *file)
 {
 	struct drm_i915_private *i915 = inode->i_private;
@@ -4853,7 +4880,8 @@ static const struct i915_debugfs_files {
 	{"i915_hpd_storm_ctl", &i915_hpd_storm_ctl_fops},
 	{"i915_ipc_status", &i915_ipc_status_fops},
 	{"i915_drrs_ctl", &i915_drrs_ctl_fops},
-	{"i915_edp_psr_debug", &i915_edp_psr_debug_fops}
+	{"i915_edp_psr_debug", &i915_edp_psr_debug_fops},
+	{"i915_gep_enable", &i915_gep_enable_fops}
 };
 
 int i915_debugfs_register(struct drm_i915_private *dev_priv)

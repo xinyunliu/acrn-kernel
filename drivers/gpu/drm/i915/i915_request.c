@@ -821,6 +821,8 @@ i915_request_alloc(struct intel_engine_cs *engine, struct i915_gem_context *ctx)
 
 	rq->infix = rq->ring->emit; /* end of header; start of user payload */
 
+	memset(&rq->gep_req, 0, sizeof(rq->gep_req));
+
 	/* Check that we didn't interrupt ourselves with a new request */
 	GEM_BUG_ON(rq->timeline->seqno != rq->fence.seqno);
 	return rq;
