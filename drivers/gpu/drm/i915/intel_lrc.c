@@ -337,6 +337,7 @@ static void __unwind_incomplete_requests(struct intel_engine_cs *engine)
 		if (i915_request_completed(rq))
 			return;
 
+		i915_gep_trace("unwind_incomplete_requests fence_ctx=%llu seqno=%u", rq->fence.context, rq->fence.seqno);
 		__i915_request_unsubmit(rq);
 		unwind_wa_tail(rq);
 
@@ -509,6 +510,8 @@ static void execlists_submit_ports(struct intel_engine_cs *engine)
 				  rq->fence.context, rq->fence.seqno,
 				  intel_engine_get_seqno(engine),
 				  rq_prio(rq));
+			i915_gep_trace("execlists_submit_ports pid=%d fence_ctx=%llu seqno=%u global=%u port=%u count=%u",
+					rq->gep_req.pid, rq->fence.context, rq->fence.seqno, rq->global_seqno, n, count);
 		} else {
 			GEM_BUG_ON(!n);
 			desc = 0;
@@ -611,6 +614,8 @@ static void inject_preempt_context(struct intel_engine_cs *engine)
 	/* we need to manually load the submit queue */
 	if (execlists->ctrl_reg)
 		writel(EL_CTRL_LOAD, execlists->ctrl_reg);
+
+	i915_gep_trace("inject_preempt_context engine=%d", engine->id);
 
 	execlists_clear_active(execlists, EXECLISTS_ACTIVE_HWACK);
 	execlists_set_active(execlists, EXECLISTS_ACTIVE_PREEMPT);
