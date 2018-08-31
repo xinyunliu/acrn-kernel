@@ -8,8 +8,10 @@ config ACRN
 	depends on X86_64
 	depends on PARAVIRT
 	depends on DMA_CMA
+	depends on PCI_MSI
 	depends on !INTEL_IOMMU
 	depends on !VMAP_STACK
+	select PARAVIRT_XXL
 	help
 	  This option is needed if were to run ACRN services linux on top of
 	  ACRN hypervisor.
