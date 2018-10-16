@@ -4509,7 +4509,7 @@ skl_compute_plane_wm_params(const struct drm_i915_private *dev_priv,
 
 	if (!fb) {
 		DRM_DEBUG_KMS("Invalid fb for plane\n");
-		return -EINVAL;
+		return 0;
 	}
 
 	/* only NV12 format has two planes */
