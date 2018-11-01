@@ -706,7 +706,10 @@ static int prepare_workload(struct intel_vgpu_workload *workload)
 
 	update_shadow_pdps(workload);
 
+	i915_gep_start_trace("sync_oos_pages");
 	ret = intel_vgpu_sync_oos_pages(workload->vgpu);
+	i915_gep_end_trace();
+
 	if (ret) {
 		gvt_vgpu_err("fail to vgpu sync oos pages\n");
 		goto err_unpin_mm;
@@ -782,6 +785,10 @@ static int dispatch_workload(struct intel_vgpu_workload *workload)
 	if (ret)
 		goto out;
 
+	i915_gep_start_trace("dispatch workload=%px fence_ctx=%llu seqno=%u",
+		workload, workload->req->fence.context,
+		workload->req->fence.seqno);
+
 	ret = prepare_workload(workload);
 
 	workload->guilty_count = atomic_read(&workload->req->gem_context->guilty_count);
@@ -800,6 +807,9 @@ out:
 
 	mutex_unlock(&dev_priv->drm.struct_mutex);
 	mutex_unlock(&vgpu->vgpu_lock);
+
+	i915_gep_end_trace();
+
 	return ret;
 }
 

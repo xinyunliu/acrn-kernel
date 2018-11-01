@@ -109,6 +109,10 @@ int intel_vgpu_emulate_mmio_read(struct intel_vgpu *vgpu, uint64_t pa,
 		failsafe_emulate_mmio_rw(vgpu, pa, p_data, bytes, true);
 		return 0;
 	}
+
+	i915_gep_start_trace("emulate_mmio_read pa=%llx p_data=%llx bytes=%d",
+			pa, *(u64 *)p_data, bytes);
+
 	mutex_lock(&vgpu->vgpu_lock);
 
 	offset = intel_vgpu_gpa_to_mmio_offset(vgpu, pa);
@@ -157,6 +161,9 @@ err:
 			offset, bytes);
 out:
 	mutex_unlock(&vgpu->vgpu_lock);
+
+	i915_gep_end_trace();
+
 	return ret;
 }
 
@@ -181,6 +188,9 @@ int intel_vgpu_emulate_mmio_write(struct intel_vgpu *vgpu, uint64_t pa,
 		failsafe_emulate_mmio_rw(vgpu, pa, p_data, bytes, false);
 		return 0;
 	}
+
+	i915_gep_start_trace("emulate_mmio_write pa=%llx p_data=%llx bytes=%d",
+			pa, *(u64 *)p_data, bytes);
 
 	mutex_lock(&vgpu->vgpu_lock);
 
@@ -221,6 +231,9 @@ err:
 		     bytes);
 out:
 	mutex_unlock(&vgpu->vgpu_lock);
+
+	i915_gep_end_trace();
+
 	return ret;
 }
 

@@ -452,6 +452,8 @@ static int submit_context(struct intel_vgpu *vgpu, int ring_id,
 	workload->complete = complete_execlist_workload;
 	workload->emulate_schedule_in = emulate_schedule_in;
 
+	i915_gep_start_trace("submit_context workload=%px", workload);
+
 	if (emulate_schedule_in)
 		workload->elsp_dwords = s->execlist[ring_id].elsp_dwords;
 
@@ -459,6 +461,9 @@ static int submit_context(struct intel_vgpu *vgpu, int ring_id,
 			ring_id, emulate_schedule_in);
 
 	intel_vgpu_queue_workload(workload);
+
+	i915_gep_end_trace();
+
 	return 0;
 }
 
