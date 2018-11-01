@@ -793,9 +793,13 @@ static int ppgtt_write_protection_handler(
 	if (bytes != 4 && bytes != 8)
 		return -EINVAL;
 
+	i915_gep_start_trace("ppgtt_write_protection gpa=%llx data=%llx bytes=%d",
+			gpa, *(u64 *)data, bytes);
+
 	ret = ppgtt_handle_guest_write_page_table_bytes(spt, gpa, data, bytes);
-	if (ret)
-		return ret;
+
+	i915_gep_end_trace();
+
 	return ret;
 }
 
@@ -2499,7 +2503,13 @@ int intel_vgpu_emulate_ggtt_mmio_write(struct intel_vgpu *vgpu,
 		return -EINVAL;
 
 	off -= info->gtt_start_offset;
+
+	i915_gep_start_trace("gtt off=%x", off);
+
 	ret = emulate_ggtt_mmio_write(vgpu, off, p_data, bytes);
+
+	i915_gep_end_trace();
+
 	return ret;
 }
 
