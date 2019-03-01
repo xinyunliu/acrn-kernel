@@ -340,7 +340,9 @@ struct intel_vgpu *acrngt_instance_create(domid_t vm_id,
 	}
 
 	/* trap config space access */
-	acrn_ioreq_intercept_bdf(info->client, 0, 2, 0);
+	acrn_ioreq_intercept_bdf(info->client, 0, 3, 0);
+	printk(KERN_ALERT "[xyl] acrn_ioreq_intercept_bdf bdf(0,3,0)\n");
+
 	acrn_ioreq_attach_client(info->client);
 
 	gvt_dbg_core("create vgpu instance success, vm_id %d, client %d,"
