@@ -226,12 +226,12 @@ int intel_vgpu_init_opregion(struct intel_vgpu *vgpu)
 	struct vbt v;
 	const char opregion_signature[16] = OPREGION_SIGNATURE;
 
-	gvt_dbg_core("init vgpu%d opregion\n", vgpu->id);
+	printk("[xyl] intel_vgpu_init_opregion(): init vgpu%d opregion\n", vgpu->id);
 	vgpu_opregion(vgpu)->va = (void *)__get_free_pages(GFP_KERNEL |
 			__GFP_ZERO,
 			get_order(INTEL_GVT_OPREGION_SIZE));
 	if (!vgpu_opregion(vgpu)->va) {
-		gvt_err("fail to get memory for vgpu virt opregion\n");
+		printk("fail to get memory for vgpu virt opregion\n");
 		return -ENOMEM;
 	}
 
@@ -262,6 +262,7 @@ static int map_vgpu_opregion(struct intel_vgpu *vgpu, bool map)
 	u64 mfn;
 	int i, ret;
 
+       printk("[xyl] map_vgpu_opregion: %c\n", map? 'Y':'N');
 	for (i = 0; i < INTEL_GVT_OPREGION_PAGES; i++) {
 		mfn = intel_gvt_hypervisor_virt_to_mfn(vgpu_opregion(vgpu)->va
 			+ i * PAGE_SIZE);
@@ -298,15 +299,12 @@ int intel_vgpu_opregion_base_write_handler(struct intel_vgpu *vgpu, u32 gpa)
 
 	int i, ret = 0;
 
-	printk("emulate opregion from kernel\n");
-
 	switch (intel_gvt_host.hypervisor_type) {
 	case INTEL_GVT_HYPERVISOR_KVM:
 		for (i = 0; i < INTEL_GVT_OPREGION_PAGES; i++)
 			vgpu_opregion(vgpu)->gfn[i] = (gpa >> PAGE_SHIFT) + i;
 		break;
 	case INTEL_GVT_HYPERVISOR_XEN:
-	case INTEL_GVT_HYPERVISOR_ACRN:
 		/**
 		 * Wins guest on Xengt will write this register twice: xen
 		 * hvmloader and windows graphic driver.
@@ -318,8 +316,17 @@ int intel_vgpu_opregion_base_write_handler(struct intel_vgpu *vgpu, u32 gpa)
 			vgpu_opregion(vgpu)->gfn[i] = (gpa >> PAGE_SHIFT) + i;
 
 		ret = map_vgpu_opregion(vgpu, true);
-		printk("[xyl] intel_vgpu_opregion_base_write_handler()\n");
 		break;
+        case INTEL_GVT_HYPERVISOR_ACRN:
+        	if (vgpu_opregion(vgpu)->mapped)
+			map_vgpu_opregion(vgpu, false);
+
+		for (i = 0; i < INTEL_GVT_OPREGION_PAGES; i++)
+			vgpu_opregion(vgpu)->gfn[i] = (gpa >> PAGE_SHIFT) + i;
+
+		ret = map_vgpu_opregion(vgpu, true);
+		printk("[xyl] acrn do write opregion handler: ret=%d\n", ret);
+		break;    
 	default:
 		ret = -EINVAL;
 		printk("not supported hypervisor\n");
@@ -335,7 +342,7 @@ int intel_vgpu_opregion_base_write_handler(struct intel_vgpu *vgpu, u32 gpa)
  */
 void intel_vgpu_clean_opregion(struct intel_vgpu *vgpu)
 {
-	gvt_dbg_core("vgpu%d: clean vgpu opregion\n", vgpu->id);
+	printk("vgpu%d: clean vgpu opregion\n", vgpu->id);
 
 	if (!vgpu_opregion(vgpu)->va)
 		return;
@@ -475,14 +482,21 @@ int intel_vgpu_emulate_opregion_request(struct intel_vgpu *vgpu, u32 swsci)
 	u64 scic_pa = 0, parm_pa = 0;
 	int ret;
 
+      printk("[xyl] called in intel_vgpu_emulate_opregion_request()\n");
+      
 	switch (intel_gvt_host.hypervisor_type) {
 	case INTEL_GVT_HYPERVISOR_XEN:
-	case INTEL_GVT_HYPERVISOR_ACRN:
 		scic = *((u32 *)vgpu_opregion(vgpu)->va +
 					INTEL_GVT_OPREGION_SCIC);
 		parm = *((u32 *)vgpu_opregion(vgpu)->va +
 					INTEL_GVT_OPREGION_PARM);
-		printk("intel_vgpu_emulate_opregion_request: \n");
+		break;
+       case INTEL_GVT_HYPERVISOR_ACRN:
+		scic = *((u32 *)vgpu_opregion(vgpu)->va +
+					INTEL_GVT_OPREGION_SCIC);
+		parm = *((u32 *)vgpu_opregion(vgpu)->va +
+					INTEL_GVT_OPREGION_PARM);
+		printk("[xyl] intel_vgpu_emulate_opregion_request(): acrngt\n");
 		break;
 	case INTEL_GVT_HYPERVISOR_KVM:
 		scic_pa = (vgpu_opregion(vgpu)->gfn[0] << PAGE_SHIFT) +

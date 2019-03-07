@@ -338,6 +338,7 @@ static inline int intel_gvt_hypervisor_set_pvmmio(
  */
 static inline int intel_gvt_hypervisor_set_opregion(struct intel_vgpu *vgpu)
 {
+      printk("[xyl] intel_gvt_hypervisor_set_opregion() called\n");
 	if (!intel_gvt_host.mpt->set_opregion)
 		return 0;
 

@@ -956,6 +956,36 @@ static void acrngt_dma_unmap_guest_page(unsigned long handle,
 {
 }
 
+static int acrngt_set_opregion(void *p_vgpu)
+{
+	struct intel_vgpu *vgpu = (struct intel_vgpu *)p_vgpu;
+	struct intel_gvt *gvt = vgpu->gvt;
+	struct pci_dev *pdev = gvt->dev_priv->drm.pdev;
+	void *base;
+	u32 asls;
+
+	DRM_DEBUG_DRIVER("[xyl] acrngt set opregion\n");
+
+	base = vgpu_opregion(vgpu)->va;
+	if (!base)
+		return -ENOMEM;
+
+	DRM_DEBUG_DRIVER("  OPREGION vgt: 0x%x\n",  *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION));
+
+	pci_read_config_dword(pdev, ASLS, &asls);
+
+	DRM_DEBUG_DRIVER(" graphic opregion physical addr: 0x%x\n", asls);
+	if (asls == 0) {
+		DRM_DEBUG_DRIVER("ACPI OpRegion not supported!\n");
+		return -ENOTSUPP;
+	}
+
+      *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION) = asls;
+      DRM_DEBUG_DRIVER("  OPREGION vgt: 0x%x\n",  *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION));
+
+	return 0;
+}
+
 struct intel_gvt_mpt acrn_gvt_mpt = {
 	//.detect_host = acrngt_detect_host,
 	.host_init = acrngt_host_init,
@@ -975,6 +1005,7 @@ struct intel_gvt_mpt acrn_gvt_mpt = {
 	.set_trap_area = acrngt_set_trap_area,
 	.set_pvmmio = acrngt_set_pvmmio,
 	.dom0_ready = acrngt_dom0_ready,
+	.set_opregion = acrngt_set_opregion,
 };
 EXPORT_SYMBOL_GPL(acrn_gvt_mpt);
 

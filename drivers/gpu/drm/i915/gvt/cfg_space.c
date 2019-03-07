@@ -114,6 +114,25 @@ int intel_vgpu_emulate_cfg_read(struct intel_vgpu *vgpu, unsigned int offset,
 		return -EINVAL;
 
 	memcpy(p_data, vgpu_cfg_space(vgpu) + offset, bytes);
+
+	if (1) {
+		unsigned int data = -1;
+		switch (bytes) {
+		case 1:
+			data = *(uint8_t *)p_data;
+			break;
+		case 2:
+			data = *(uint16_t *)p_data;
+			break;
+		case 4:
+			data = *(uint32_t *)p_data;
+			break;
+		}
+		if (1 || (rounddown(offset, 4) == INTEL_GVT_PCI_SWSCI ||
+			  rounddown(offset, 4) == INTEL_GVT_PCI_OPREGION)) {
+			gvt_dbg_core(" intel_vgpu_emulate_cfg_read: [0x%x]=== 0x%x\n",offset, data);
+		}
+	}
 	return 0;
 }
 
@@ -332,7 +351,7 @@ static int emulate_pci_bar_write(struct intel_vgpu *vgpu, unsigned int offset,
 }
 
 /**
- * intel_vgpu_emulate_cfg_read - emulate vGPU configuration space write
+ * intel_vgpu_emulate_cfg_write - emulate vGPU configuration space write
  * @vgpu: a vGPU
  * @offset: offset into the PCI configuration space
  * @p_data: data buffer write to vGPU's emulated configure space
@@ -388,6 +407,8 @@ int intel_vgpu_emulate_cfg_write(struct intel_vgpu *vgpu, unsigned int offset,
 			printk("[xyl] INTEL_GVT_PCI_SWSCI: addr not aligned and return\n");
 			return -EINVAL;
 		}
+
+    		printk("[xyl] intel_vgpu_emulate_opregion_request \n");
 		ret = intel_vgpu_emulate_opregion_request(vgpu, *(u32 *)p_data);
 		if (ret)
 			return ret;
@@ -409,6 +430,7 @@ int intel_vgpu_emulate_cfg_write(struct intel_vgpu *vgpu, unsigned int offset,
 			return 0;
 			*/
 
+		printk("[xyl] intel_vgpu_opregion_base_write_handler()[0x%x] <== %x\n", offset, *(u32*)p_data);
 		ret = intel_vgpu_opregion_base_write_handler(vgpu,
 						   *(u32 *)p_data);
 		if (ret)
@@ -463,8 +485,10 @@ void intel_vgpu_init_cfg_space(struct intel_vgpu *vgpu,
 	memset(vgpu_cfg_space(vgpu) + PCI_BASE_ADDRESS_1, 0, 4);
 	memset(vgpu_cfg_space(vgpu) + PCI_BASE_ADDRESS_3, 0, 4);
 	memset(vgpu_cfg_space(vgpu) + PCI_BASE_ADDRESS_4, 0, 8);
-	memset(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION, 0, 4);
 
+      DRM_DEBUG_DRIVER("OPREGION vgt: 0x%x\n",  *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION));
+	memset(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION, 0, 4);
+      DRM_DEBUG_DRIVER("OPREGION vgt: 0x%x\n",  *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION));
 	vgpu->cfg_space.bar[INTEL_GVT_PCI_BAR_GTTMMIO].size =
 				pci_resource_len(gvt->dev_priv->drm.pdev, 0);
 	vgpu->cfg_space.bar[INTEL_GVT_PCI_BAR_APERTURE].size =
