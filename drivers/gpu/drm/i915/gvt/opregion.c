@@ -298,7 +298,7 @@ int intel_vgpu_opregion_base_write_handler(struct intel_vgpu *vgpu, u32 gpa)
 
 	int i, ret = 0;
 
-	gvt_dbg_core("emulate opregion from kernel\n");
+	printk("emulate opregion from kernel\n");
 
 	switch (intel_gvt_host.hypervisor_type) {
 	case INTEL_GVT_HYPERVISOR_KVM:
@@ -306,6 +306,7 @@ int intel_vgpu_opregion_base_write_handler(struct intel_vgpu *vgpu, u32 gpa)
 			vgpu_opregion(vgpu)->gfn[i] = (gpa >> PAGE_SHIFT) + i;
 		break;
 	case INTEL_GVT_HYPERVISOR_XEN:
+	case INTEL_GVT_HYPERVISOR_ACRN:
 		/**
 		 * Wins guest on Xengt will write this register twice: xen
 		 * hvmloader and windows graphic driver.
@@ -317,10 +318,11 @@ int intel_vgpu_opregion_base_write_handler(struct intel_vgpu *vgpu, u32 gpa)
 			vgpu_opregion(vgpu)->gfn[i] = (gpa >> PAGE_SHIFT) + i;
 
 		ret = map_vgpu_opregion(vgpu, true);
+		printk("[xyl] intel_vgpu_opregion_base_write_handler()\n");
 		break;
 	default:
 		ret = -EINVAL;
-		gvt_vgpu_err("not supported hypervisor\n");
+		printk("not supported hypervisor\n");
 	}
 
 	return ret;
@@ -338,7 +340,8 @@ void intel_vgpu_clean_opregion(struct intel_vgpu *vgpu)
 	if (!vgpu_opregion(vgpu)->va)
 		return;
 
-	if (intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_XEN) {
+	if (intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_XEN ||
+		intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_ACRN) {
 		if (vgpu_opregion(vgpu)->mapped)
 			map_vgpu_opregion(vgpu, false);
 	} else if (intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_KVM) {
@@ -474,10 +477,12 @@ int intel_vgpu_emulate_opregion_request(struct intel_vgpu *vgpu, u32 swsci)
 
 	switch (intel_gvt_host.hypervisor_type) {
 	case INTEL_GVT_HYPERVISOR_XEN:
+	case INTEL_GVT_HYPERVISOR_ACRN:
 		scic = *((u32 *)vgpu_opregion(vgpu)->va +
 					INTEL_GVT_OPREGION_SCIC);
 		parm = *((u32 *)vgpu_opregion(vgpu)->va +
 					INTEL_GVT_OPREGION_PARM);
+		printk("intel_vgpu_emulate_opregion_request: \n");
 		break;
 	case INTEL_GVT_HYPERVISOR_KVM:
 		scic_pa = (vgpu_opregion(vgpu)->gfn[0] << PAGE_SHIFT) +
@@ -521,7 +526,7 @@ int intel_vgpu_emulate_opregion_request(struct intel_vgpu *vgpu, u32 swsci)
 	func = GVT_OPREGION_FUNC(scic);
 	subfunc = GVT_OPREGION_SUBFUNC(scic);
 	if (!querying_capabilities(scic)) {
-		gvt_vgpu_err("requesting runtime service: func \"%s\","
+		printk("requesting runtime service: func \"%s\","
 				" subfunc \"%s\"\n",
 				opregion_func_name(func),
 				opregion_subfunc_name(subfunc));
@@ -539,10 +544,12 @@ int intel_vgpu_emulate_opregion_request(struct intel_vgpu *vgpu, u32 swsci)
 out:
 	switch (intel_gvt_host.hypervisor_type) {
 	case INTEL_GVT_HYPERVISOR_XEN:
+	case INTEL_GVT_HYPERVISOR_ACRN:
 		*((u32 *)vgpu_opregion(vgpu)->va +
 					INTEL_GVT_OPREGION_SCIC) = scic;
 		*((u32 *)vgpu_opregion(vgpu)->va +
 					INTEL_GVT_OPREGION_PARM) = parm;
+		printk("  set value\n");
 		break;
 	case INTEL_GVT_HYPERVISOR_KVM:
 		ret = intel_gvt_hypervisor_write_gpa(vgpu, scic_pa,
@@ -563,7 +570,7 @@ out:
 
 		break;
 	default:
-		gvt_vgpu_err("not supported hypervisor\n");
+		printk("not supported hypervisor\n");
 		return -EINVAL;
 	}
 

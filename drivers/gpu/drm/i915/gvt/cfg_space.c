@@ -384,24 +384,30 @@ int intel_vgpu_emulate_cfg_write(struct intel_vgpu *vgpu, unsigned int offset,
 		return emulate_pci_bar_write(vgpu, offset, p_data, bytes);
 
 	case INTEL_GVT_PCI_SWSCI:
-		if (WARN_ON(!IS_ALIGNED(offset, 4)))
+		if (WARN_ON(!IS_ALIGNED(offset, 4))) {
+			printk("[xyl] INTEL_GVT_PCI_SWSCI: addr not aligned and return\n");
 			return -EINVAL;
+		}
 		ret = intel_vgpu_emulate_opregion_request(vgpu, *(u32 *)p_data);
 		if (ret)
 			return ret;
 		break;
 
 	case INTEL_GVT_PCI_OPREGION:
-		if (WARN_ON(!IS_ALIGNED(offset, 4)))
+		if (WARN_ON(!IS_ALIGNED(offset, 4))) {
+			printk("[xyl] INTEL_GVT_PCI_OPREGION: addr not aligned and return\n");
 			return -EINVAL;
+		}
 
 		/*
 		 * To support virtual display, we need to override the real VBT in the
 		 * OpRegion. So here we don't report OpRegion to guest.
 		 */
+		/*
 		if (IS_BROXTON(vgpu->gvt->dev_priv) ||
 				IS_KABYLAKE(vgpu->gvt->dev_priv))
 			return 0;
+			*/
 
 		ret = intel_vgpu_opregion_base_write_handler(vgpu,
 						   *(u32 *)p_data);
