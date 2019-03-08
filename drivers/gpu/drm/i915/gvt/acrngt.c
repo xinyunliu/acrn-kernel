@@ -980,8 +980,17 @@ static int acrngt_set_opregion(void *p_vgpu)
 		return -ENOTSUPP;
 	}
 
-      *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION) = asls;
-      DRM_DEBUG_DRIVER("  OPREGION vgt: 0x%x\n",  *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION));
+	/* hack opregion to [0xDFFFD000, 0xE0000000] */
+	asls = 0xDFFFD000;
+	*(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION) = asls;
+
+	DRM_DEBUG_DRIVER("  OPREGION vgt: 0x%x\n",  *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION));
+
+	for (int i = 0; i < INTEL_GVT_OPREGION_PAGES; i++) {
+		vgpu_opregion(vgpu)->gfn[i] = (asls >> PAGE_SHIFT) + i;
+		DRM_DEBUG_DRIVER(" gfn[%d]: 0x%x", i, vgpu_opregion(vgpu)->gfn[i]);
+	}
+
 
 	return 0;
 }

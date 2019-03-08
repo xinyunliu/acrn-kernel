@@ -226,7 +226,6 @@ int intel_vgpu_init_opregion(struct intel_vgpu *vgpu)
 	struct vbt v;
 	const char opregion_signature[16] = OPREGION_SIGNATURE;
 
-	printk("[xyl] intel_vgpu_init_opregion(): init vgpu%d opregion\n", vgpu->id);
 	vgpu_opregion(vgpu)->va = (void *)__get_free_pages(GFP_KERNEL |
 			__GFP_ZERO,
 			get_order(INTEL_GVT_OPREGION_SIZE));
@@ -234,6 +233,8 @@ int intel_vgpu_init_opregion(struct intel_vgpu *vgpu)
 		printk("fail to get memory for vgpu virt opregion\n");
 		return -ENOMEM;
 	}
+
+	printk("[xyl] intel_vgpu_init_opregion(): init vgpu%d opregion @%p\n", vgpu->id, vgpu_opregion(vgpu)->va);
 
 	/* emulated opregion with VBT mailbox only */
 	buf = (u8 *)vgpu_opregion(vgpu)->va;
@@ -257,7 +258,7 @@ int intel_vgpu_init_opregion(struct intel_vgpu *vgpu)
 	return 0;
 }
 
-static int map_vgpu_opregion(struct intel_vgpu *vgpu, bool map)
+int map_vgpu_opregion(struct intel_vgpu *vgpu, bool map)
 {
 	u64 mfn;
 	int i, ret;
@@ -270,6 +271,8 @@ static int map_vgpu_opregion(struct intel_vgpu *vgpu, bool map)
 			gvt_vgpu_err("fail to get MFN from VA\n");
 			return -EINVAL;
 		}
+             printk("Round[%d] gfn: %x ==> mfn: %llx \n", i, vgpu_opregion(vgpu)->gfn[i], mfn);
+
 		ret = intel_gvt_hypervisor_map_gfn_to_mfn(vgpu,
 				vgpu_opregion(vgpu)->gfn[i],
 				mfn, 1, map);
@@ -326,7 +329,7 @@ int intel_vgpu_opregion_base_write_handler(struct intel_vgpu *vgpu, u32 gpa)
 
 		ret = map_vgpu_opregion(vgpu, true);
 		printk("[xyl] acrn do write opregion handler: ret=%d\n", ret);
-		break;    
+		break;
 	default:
 		ret = -EINVAL;
 		printk("not supported hypervisor\n");
@@ -483,7 +486,7 @@ int intel_vgpu_emulate_opregion_request(struct intel_vgpu *vgpu, u32 swsci)
 	int ret;
 
       printk("[xyl] called in intel_vgpu_emulate_opregion_request()\n");
-      
+
 	switch (intel_gvt_host.hypervisor_type) {
 	case INTEL_GVT_HYPERVISOR_XEN:
 		scic = *((u32 *)vgpu_opregion(vgpu)->va +

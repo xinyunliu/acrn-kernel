@@ -113,6 +113,16 @@ int intel_vgpu_emulate_cfg_read(struct intel_vgpu *vgpu, unsigned int offset,
 	if (WARN_ON(offset + bytes > vgpu->gvt->device_info.cfg_space_size))
 		return -EINVAL;
 
+	if (rounddown(offset, 4) == INTEL_GVT_PCI_SWSCI ||
+			rounddown(offset, 4) == INTEL_GVT_PCI_OPREGION) {
+		if (1) {
+			if (!vgpu_opregion(vgpu)->mapped) {
+				DRM_DEBUG_DRIVER(" starting maping opregion...\n");
+				map_vgpu_opregion(vgpu, true);
+			}
+		}
+
+	}
 	memcpy(p_data, vgpu_cfg_space(vgpu) + offset, bytes);
 
 	if (1) {
@@ -128,9 +138,11 @@ int intel_vgpu_emulate_cfg_read(struct intel_vgpu *vgpu, unsigned int offset,
 			data = *(uint32_t *)p_data;
 			break;
 		}
-		if (1 || (rounddown(offset, 4) == INTEL_GVT_PCI_SWSCI ||
-			  rounddown(offset, 4) == INTEL_GVT_PCI_OPREGION)) {
-			gvt_dbg_core(" intel_vgpu_emulate_cfg_read: [0x%x]=== 0x%x\n",offset, data);
+		if (1) {
+			if (rounddown(offset, 4) == INTEL_GVT_PCI_SWSCI ||
+					rounddown(offset, 4) == INTEL_GVT_PCI_OPREGION) {
+				DRM_DEBUG_DRIVER(" intel_vgpu_emulate_cfg_read: [0x%x]=== 0x%x\n",offset, data);
+			}
 		}
 	}
 	return 0;
