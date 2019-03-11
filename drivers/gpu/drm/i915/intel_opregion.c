@@ -990,6 +990,9 @@ int intel_opregion_setup(struct drm_i915_private *dev_priv)
 	opregion->lid_state = base + ACPI_CLID;
 
 	mboxes = opregion->header->mboxes;
+
+	DRM_DEBUG_DRIVER("mboxes: %x\n", mboxes);
+
 	if (mboxes & MBOX_ACPI) {
 		DRM_DEBUG_DRIVER("Public ACPI methods supported\n");
 		opregion->acpi = base + OPREGION_ACPI_OFFSET;
