@@ -963,6 +963,7 @@ static int acrngt_set_opregion(void *p_vgpu)
 	struct pci_dev *pdev = gvt->dev_priv->drm.pdev;
 	void *base;
 	u32 asls;
+	int i;
 
 	DRM_DEBUG_DRIVER("[xyl] acrngt set opregion\n");
 
@@ -986,7 +987,7 @@ static int acrngt_set_opregion(void *p_vgpu)
 
 	DRM_DEBUG_DRIVER("  OPREGION vgt: 0x%x\n",  *(u32*)(vgpu_cfg_space(vgpu) + INTEL_GVT_PCI_OPREGION));
 
-	for (int i = 0; i < INTEL_GVT_OPREGION_PAGES; i++) {
+	for (i = 0; i < INTEL_GVT_OPREGION_PAGES; i++) {
 		vgpu_opregion(vgpu)->gfn[i] = (asls >> PAGE_SHIFT) + i;
 		DRM_DEBUG_DRIVER(" gfn[%d]: 0x%x", i, vgpu_opregion(vgpu)->gfn[i]);
 	}

@@ -976,8 +976,12 @@ int intel_opregion_setup(struct drm_i915_private *dev_priv)
 	INIT_WORK(&opregion->asle_work, asle_work);
 
 	base = memremap(asls, OPREGION_SIZE, MEMREMAP_WB);
-	if (!base)
+	if (!base) {
+		DRM_DEBUG_DRIVER("opregion 0x%x failed to be mapped\n", asls);
 		return -ENOMEM;
+	} else {
+		DRM_DEBUG_DRIVER("opregion 0x%x mapped at 0x%p\n", asls, base);
+	}
 
 	memcpy(buf, base, sizeof(buf));
 
