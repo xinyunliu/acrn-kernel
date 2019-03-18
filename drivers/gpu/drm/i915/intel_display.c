@@ -9987,6 +9987,9 @@ static void i9xx_update_cursor(struct intel_plane *plane,
 	u32 cntl = 0, base = 0, pos = 0, fbc_ctl = 0;
 	unsigned long irqflags;
 
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+	struct intel_gvt *gvt = dev_priv->gvt;
+#endif
 	if (plane_state && plane_state->base.visible) {
 		cntl = plane_state->ctl;
 
