@@ -57,7 +57,10 @@
 
 #define VGT_SPRSTRIDE(pipe)	_PIPE(pipe, _SPRA_STRIDE, _PLANE_STRIDE_2_B)
 
+#define _REG_700AC(pipe) (0x700ac + pipe * 0x1000)
 #define _REG_701AC(pipe, plane) (0x701ac + pipe * 0x1000 + plane * 0x100)
+
+#define REG_700AC(pipe) _MMIO(_REG_700AC(pipe))
 
 #define SKL_PS_REG_TO_PIPE(reg) (((reg) >> 11) & 0x3)
 #define SKL_PS_REG_TO_SCALER(reg) (((reg) >> 8) & 0x3)
@@ -66,6 +69,7 @@
 #define SKL_PLANE_REG_TO_PIPE(reg) (((reg) >> 12) & 0x3)
 #define SKL_PLANE_REG_TO_PLANE(reg) ((((reg) & 0xFFF) - 0x180) >> 8)
 #define SKL_FLIP_EVENT(pipe, plane) (PRIMARY_A_FLIP_DONE + (plane)*3 + pipe)
+#define SKL_CURSOR_MODE_MASK 0x3F
 
 #define GFX_MODE_BIT_SET_IN_MASK(val, bit) \
 		((((bit) & 0xffff0000) == 0) && !!((val) & (((bit) << 16))))
