@@ -530,19 +530,22 @@ static ssize_t acrngt_sysfs_instance_manage(struct kobject *kobj,
 static ssize_t show_plane_owner(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "Planes:\nPipe A: %d %d %d %d\n"
-				"Pipe B: %d %d %d %d\nPipe C: %d %d %d\n",
+	return sprintf(buf, "Planes: P 0 1 2 C\nPipe A: %d %d %d %d %d\n"
+			    "Pipe B: %d %d %d %d %d\nPipe C: %d %d %d   %d\n",
 		acrngt_priv.gvt->pipe_info[PIPE_A].plane_owner[PLANE_PRIMARY],
 		acrngt_priv.gvt->pipe_info[PIPE_A].plane_owner[PLANE_SPRITE0],
 		acrngt_priv.gvt->pipe_info[PIPE_A].plane_owner[PLANE_SPRITE1],
 		acrngt_priv.gvt->pipe_info[PIPE_A].plane_owner[PLANE_SPRITE2],
+		acrngt_priv.gvt->pipe_info[PIPE_A].plane_owner[PLANE_CURSOR],
 		acrngt_priv.gvt->pipe_info[PIPE_B].plane_owner[PLANE_PRIMARY],
 		acrngt_priv.gvt->pipe_info[PIPE_B].plane_owner[PLANE_SPRITE0],
 		acrngt_priv.gvt->pipe_info[PIPE_B].plane_owner[PLANE_SPRITE1],
 		acrngt_priv.gvt->pipe_info[PIPE_B].plane_owner[PLANE_SPRITE2],
+		acrngt_priv.gvt->pipe_info[PIPE_B].plane_owner[PLANE_CURSOR],
 		acrngt_priv.gvt->pipe_info[PIPE_C].plane_owner[PLANE_PRIMARY],
 		acrngt_priv.gvt->pipe_info[PIPE_C].plane_owner[PLANE_SPRITE0],
-		acrngt_priv.gvt->pipe_info[PIPE_C].plane_owner[PLANE_SPRITE1]);
+		acrngt_priv.gvt->pipe_info[PIPE_C].plane_owner[PLANE_SPRITE1],
+		acrngt_priv.gvt->pipe_info[PIPE_C].plane_owner[PLANE_CURSOR]);
 }
 
 static struct kobj_attribute acrngt_instance_attr =
