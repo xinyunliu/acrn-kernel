@@ -328,6 +328,8 @@ void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
 	int i = 0;
 	int num_active = hweight32(active_crtcs);
 
+	DRM_DEBUG_DRIVER("active_crtcs:0x%x num_active:%d\n", active_crtcs, num_active);
+
 	if (!num_active)
 		return;
 

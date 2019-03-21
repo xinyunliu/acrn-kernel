@@ -5233,6 +5233,10 @@ static void skl_write_cursor_wm(struct intel_crtc *intel_crtc,
 	int level, max_level = ilk_wm_max_level(dev_priv);
 	enum pipe pipe = intel_crtc->pipe;
 
+	DRM_DEBUG_DRIVER("pipe:%d ddb:[%x,%x)\n", pipe,
+			ddb->plane[pipe][PLANE_CURSOR].start,
+			ddb->plane[pipe][PLANE_CURSOR].end);
+
 	for (level = 0; level <= max_level; level++) {
 		skl_write_wm_level(dev_priv, CUR_WM(pipe, level),
 				   &wm->wm[level]);
@@ -5619,7 +5623,11 @@ static void skl_atomic_update_crtc_wm(struct intel_atomic_state *state,
 	}
 
 	for_each_plane_id_on_crtc(crtc, plane_id) {
+
 #if IS_ENABLED(CONFIG_DRM_I915_GVT)
+
+		//if (plane_id == PLANE_CURSOR) skl_write_cursor_wm(crtc, &pipe_wm->planes[plane_id], ddb);
+		//
 		if (dev_priv->gvt &&
 			dev_priv->gvt->pipe_info[pipe].plane_owner[plane_id])
 			return;

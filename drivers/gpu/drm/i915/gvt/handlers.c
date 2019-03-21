@@ -2992,8 +2992,8 @@ static int skl_cursor_surf_write(struct intel_vgpu *vgpu, unsigned int offset,
 {
 	struct drm_i915_private *dev_priv = vgpu->gvt->dev_priv;
 	unsigned int pipe = SKL_PLANE_REG_TO_PIPE(offset);
-	unsigned int plane = SKL_PLANE_REG_TO_PLANE(offset);
 	i915_reg_t reg_0ac = _MMIO(_REG_700AC(pipe));
+	static u32 surf_base = 0;
 
 	u32 old_value = vgpu_vreg_t(vgpu, reg_0ac);
 	u32 old_value2 = vgpu_vreg(vgpu, offset);
@@ -3003,14 +3003,17 @@ static int skl_cursor_surf_write(struct intel_vgpu *vgpu, unsigned int offset,
 	vgpu_vreg_t(vgpu, reg_0ac) = vgpu_vreg(vgpu, offset);
 
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
-			(vgpu->gvt->pipe_info[pipe].plane_owner[plane] == vgpu->id)) {
-		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
+			(vgpu->gvt->pipe_info[pipe].plane_owner[0] == vgpu->id)) {
+		;
+		//I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
-	DRM_DEBUG_DRIVER("Cursor base update for vgpu:%d, pipe:%d, offset:0x%x, bytes: %d, val:0x%x(0x%x)->0x%x\n",
+	if ( surf_base == 0 || surf_base != vgpu_vreg(vgpu, offset))
+		DRM_DEBUG_DRIVER("Cursor base update for vgpu:%d, pipe:%d, offset:0x%x, bytes: %d, val:0x%x(0x%x)->0x%x\n",
 			vgpu->id, pipe, offset, bytes,
 			old_value, old_value2, vgpu_vreg(vgpu, offset));
 
+	surf_base = vgpu_vreg(vgpu, offset);
 	return 0;
 }
 
@@ -3020,19 +3023,24 @@ static int skl_cursor_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 {
 	struct drm_i915_private *dev_priv = vgpu->gvt->dev_priv;
 	unsigned int pipe = SKL_PLANE_REG_TO_PIPE(offset);
-	unsigned int plane = SKL_PLANE_REG_TO_PLANE(offset);
+	static u32 surf_base = 0;
 
 	u32 old_value = vgpu_vreg(vgpu, offset);
 
 	write_vreg(vgpu, offset, p_data, bytes);
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
-			(vgpu->gvt->pipe_info[pipe].plane_owner[plane] == vgpu->id)) {
-		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
+			(vgpu->gvt->pipe_info[pipe].plane_owner[0] == vgpu->id)) {
+		;
+		//I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
-	DRM_DEBUG_DRIVER("Cursor mmio write for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
+	if ( surf_base == 0 || surf_base != vgpu_vreg(vgpu, offset)) {
+		if (offset != CURBASE(pipe).reg)
+			DRM_DEBUG_DRIVER("Cursor mmio write for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
 			vgpu->id, pipe, offset,
 			old_value, vgpu_vreg(vgpu, offset));
+	}
+	surf_base = vgpu_vreg(vgpu, offset);
 
 	return 0;
 }
@@ -3042,9 +3050,7 @@ static int skl_cursor_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 static int skl_cursor_mmio_read(struct intel_vgpu *vgpu, unsigned int offset,
 		void *p_data, unsigned int bytes)
 {
-	struct drm_i915_private *dev_priv = vgpu->gvt->dev_priv;
 	unsigned int pipe = SKL_PLANE_REG_TO_PIPE(offset);
-	unsigned int plane = SKL_PLANE_REG_TO_PLANE(offset);
 
 	read_vreg(vgpu, offset, p_data, bytes);
 
