@@ -347,7 +347,7 @@ void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
 
 		plane_cnt = (INTEL_INFO(dev_priv)->num_sprites[pipe] + 1);
 		plane_size = (pipe_size - 8) / plane_cnt;
-		DRM_DEBUG_DRIVER("  Plane%-8d%8u%8u%8u\n", PLANE_CURSOR,
+		DRM_DEBUG_DRIVER("  %-13s%8u%8u%8u\n", "Cursor",
 						   ddb->plane[pipe][PLANE_CURSOR].start,
 						   ddb->plane[pipe][PLANE_CURSOR].end,
 						   skl_ddb_entry_size(&ddb->plane[pipe][PLANE_CURSOR]));

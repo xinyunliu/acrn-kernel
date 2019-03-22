@@ -3945,8 +3945,13 @@ skl_ddb_get_hw_plane_state(struct drm_i915_private *dev_priv,
 	/* Cursor doesn't support NV12/planar, so no extra calculation needed */
 	if (plane_id == PLANE_CURSOR) {
 		val = I915_READ(CUR_BUF_CFG(pipe));
+
 		skl_ddb_entry_init_from_hw(dev_priv,
 					   &ddb->plane[pipe][plane_id], val);
+
+		DRM_DEBUG_DRIVER("cur_buf_cfg(%d): [0x%x]= 0x%x([%d,%d))\n", pipe, CUR_BUF_CFG(pipe).reg, val,
+			ddb->plane[pipe][plane_id].start, ddb->plane[pipe][plane_id].end);
+
 		return;
 	}
 
@@ -4403,6 +4408,9 @@ skl_allocate_pipe_ddb(struct intel_crtc_state *cstate,
 	 *
 	 * FIXME: we may not allocate every single block here.
 	 */
+
+	DRM_DEBUG_DRIVER("[xyl] total_data_rate: %x\n", total_data_rate);
+
 	if (total_data_rate == 0)
 		return 0;
 
@@ -5086,7 +5094,8 @@ static void skl_ddb_entry_write(struct drm_i915_private *dev_priv,
 				i915_reg_t reg,
 				const struct skl_ddb_entry *entry)
 {
-	DRM_DEBUG_DRIVER(" reg:%x  ddb:[%x, %x)\n", reg.reg, entry->start, entry->end);
+	DRM_DEBUG_DRIVER(" reg: [%x] <== 0x%x, ddb:[%d, %d)\n", reg.reg,
+		(entry->end - 1) << 16 | entry->start, entry->start, entry->end);
 
 	if (entry->end)
 		I915_WRITE(reg, (entry->end - 1) << 16 | entry->start);
@@ -5239,9 +5248,9 @@ static void skl_write_cursor_wm(struct intel_crtc *intel_crtc,
 	int level, max_level = ilk_wm_max_level(dev_priv);
 	enum pipe pipe = intel_crtc->pipe;
 
-	DRM_DEBUG_DRIVER("[cursor_wm] pipe:%d ddb:[%x,%x)\n", pipe,
-			ddb->plane[pipe][PLANE_CURSOR].start,
-			ddb->plane[pipe][PLANE_CURSOR].end);
+	DRM_DEBUG_DRIVER("cur_buf_cfg(%d): [0x%x] <== 0x%x([%d,%d))\n", pipe, CUR_BUF_CFG(pipe).reg,
+		ddb->plane[pipe][PLANE_CURSOR].start | (ddb->plane[pipe][PLANE_CURSOR].end-1)<<16,
+		ddb->plane[pipe][PLANE_CURSOR].start, ddb->plane[pipe][PLANE_CURSOR].end);
 
 	for (level = 0; level <= max_level; level++) {
 		skl_write_wm_level(dev_priv, CUR_WM(pipe, level),
@@ -5358,6 +5367,11 @@ skl_ddb_add_affected_planes(struct intel_crtc_state *cstate)
 	return 0;
 }
 
+static void
+skl_print_wm_changes(const struct drm_atomic_state *state);
+
+
+
 static int
 skl_compute_ddb(struct drm_atomic_state *state)
 {
@@ -5383,6 +5397,7 @@ skl_compute_ddb(struct drm_atomic_state *state)
 		active_crtcs = intel_state->active_crtcs ?
 			intel_state->active_crtcs : dev_priv->active_crtcs;
 		intel_gvt_allocate_ddb(dev_priv->gvt, ddb, active_crtcs);
+		skl_print_wm_changes(state);
 		return 0;
 	}
 #endif

@@ -3035,7 +3035,7 @@ static int skl_cursor_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 	}
 
 	if ( surf_base == 0 || surf_base != vgpu_vreg(vgpu, offset)) {
-		if (offset != CURBASE(pipe).reg)
+		if (offset != CURPOS(pipe).reg)
 			DRM_DEBUG_DRIVER("Cursor mmio write for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
 			vgpu->id, pipe, offset,
 			old_value, vgpu_vreg(vgpu, offset));
@@ -3237,17 +3237,17 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_DH(_MMIO(0x720ac), D_SKL_PLUS, skl_cursor_mmio_read, NULL);
 
 
-	MMIO_DH(CUR_BUF_CFG(PIPE_A), D_SKL_PLUS, NULL, NULL);
-	MMIO_DH(CUR_BUF_CFG(PIPE_B), D_SKL_PLUS, NULL, NULL);
-	MMIO_DH(CUR_BUF_CFG(PIPE_C), D_SKL_PLUS, NULL, NULL);
+	MMIO_DH(CUR_BUF_CFG(PIPE_A), D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
+	MMIO_DH(CUR_BUF_CFG(PIPE_B), D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
+	MMIO_DH(CUR_BUF_CFG(PIPE_C), D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
 
-	MMIO_F(CUR_WM(PIPE_A, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, NULL, NULL);
-	MMIO_F(CUR_WM(PIPE_B, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, NULL, NULL);
-	MMIO_F(CUR_WM(PIPE_C, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, NULL, NULL);
+	MMIO_F(CUR_WM(PIPE_A, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
+	MMIO_F(CUR_WM(PIPE_B, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
+	MMIO_F(CUR_WM(PIPE_C, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
 
-	MMIO_DH(CUR_WM_TRANS(PIPE_A), D_SKL_PLUS, NULL, NULL);
-	MMIO_DH(CUR_WM_TRANS(PIPE_B), D_SKL_PLUS, NULL, NULL);
-	MMIO_DH(CUR_WM_TRANS(PIPE_C), D_SKL_PLUS, NULL, NULL);
+	MMIO_DH(CUR_WM_TRANS(PIPE_A), D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
+	MMIO_DH(CUR_WM_TRANS(PIPE_B), D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
+	MMIO_DH(CUR_WM_TRANS(PIPE_C), D_SKL_PLUS, skl_cursor_mmio_read, skl_cursor_mmio_write);
 
 	MMIO_D(_MMIO(0x8f074), D_SKL_PLUS);
 	MMIO_D(_MMIO(0x8f004), D_SKL_PLUS);
