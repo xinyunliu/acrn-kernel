@@ -339,6 +339,7 @@ void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
 
 	memset(ddb, 0, sizeof(*ddb));
 	for_each_pipe_masked(dev_priv, pipe, active_crtcs) {
+		DRM_DEBUG_DRIVER("%-15s%8s%8s%8s\n", "", "Start", "End", "Size");
 		start = pipe_size * (i++);
 		end = start + pipe_size;
 		ddb->plane[pipe][PLANE_CURSOR].start = end - 8;
@@ -346,12 +347,20 @@ void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
 
 		plane_cnt = (INTEL_INFO(dev_priv)->num_sprites[pipe] + 1);
 		plane_size = (pipe_size - 8) / plane_cnt;
+		DRM_DEBUG_DRIVER("  Plane%-8d%8u%8u%8u\n", PLANE_CURSOR,
+						   ddb->plane[pipe][PLANE_CURSOR].start,
+						   ddb->plane[pipe][PLANE_CURSOR].end,
+						   skl_ddb_entry_size(&ddb->plane[pipe][PLANE_CURSOR]));
 
 		for_each_universal_plane(dev_priv, pipe, plane) {
 			ddb->plane[pipe][plane].start = start +
 				(plane * (pipe_size - 8) / plane_cnt);
 			ddb->plane[pipe][plane].end =
 				ddb->plane[pipe][plane].start + plane_size;
+			DRM_DEBUG_DRIVER("  Plane%-8d%8u%8u%8u\n", plane,
+						   ddb->plane[pipe][plane].start,
+						   ddb->plane[pipe][plane].end,
+						   skl_ddb_entry_size(&ddb->plane[pipe][plane]));
 		}
 	}
 }

@@ -5086,6 +5086,8 @@ static void skl_ddb_entry_write(struct drm_i915_private *dev_priv,
 				i915_reg_t reg,
 				const struct skl_ddb_entry *entry)
 {
+	DRM_DEBUG_DRIVER(" reg:%x  ddb:[%x, %x)\n", reg.reg, entry->start, entry->end);
+
 	if (entry->end)
 		I915_WRITE(reg, (entry->end - 1) << 16 | entry->start);
 	else
@@ -5192,9 +5194,11 @@ static void skl_write_plane_wm(struct intel_crtc *intel_crtc,
 		if (i915_modparams.avail_planes_per_pipe)
 			return;
 #endif
-		if (PVMMIO_LEVEL(dev_priv, PVMMIO_PLANE_WM_UPDATE))
+		if (PVMMIO_LEVEL(dev_priv, PVMMIO_PLANE_WM_UPDATE)) {
+			DRM_DEBUG_DRIVER("call skl_pv_write_plane_wm\n");
 			return skl_pv_write_plane_wm(intel_crtc, wm,
 						     ddb, plane_id);
+		}
 	}
 
 	for (level = 0; level <= max_level; level++) {
@@ -5221,6 +5225,8 @@ static void skl_write_plane_wm(struct intel_crtc *intel_crtc,
 				    &ddb->plane[pipe][plane_id]);
 		I915_WRITE(PLANE_NV12_BUF_CFG(pipe, plane_id), 0x0);
 	}
+
+	DRM_DEBUG_DRIVER("plane:%d\n", plane_id);
 }
 
 static void skl_write_cursor_wm(struct intel_crtc *intel_crtc,
@@ -5233,7 +5239,7 @@ static void skl_write_cursor_wm(struct intel_crtc *intel_crtc,
 	int level, max_level = ilk_wm_max_level(dev_priv);
 	enum pipe pipe = intel_crtc->pipe;
 
-	DRM_DEBUG_DRIVER("pipe:%d ddb:[%x,%x)\n", pipe,
+	DRM_DEBUG_DRIVER("[cursor_wm] pipe:%d ddb:[%x,%x)\n", pipe,
 			ddb->plane[pipe][PLANE_CURSOR].start,
 			ddb->plane[pipe][PLANE_CURSOR].end);
 
@@ -5611,6 +5617,7 @@ static void skl_atomic_update_crtc_wm(struct intel_atomic_state *state,
 	if (!(state->wm_results.dirty_pipes & drm_crtc_mask(&crtc->base)))
 		return;
 
+	DRM_DEBUG_DRIVER("CRTC: %d\n", pipe);
 	I915_WRITE(PIPE_WM_LINETIME(pipe), pipe_wm->linetime);
 
 	if (i915_modparams.avail_planes_per_pipe) {
@@ -5618,7 +5625,12 @@ static void skl_atomic_update_crtc_wm(struct intel_atomic_state *state,
 			skl_write_plane_wm(crtc, &pipe_wm->planes[plane_id],
 					ddb, plane_id);
 		}
-
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+		if (plane_id == PLANE_CURSOR) {
+			;
+			//skl_write_cursor_wm(crtc, &pipe_wm->planes[plane_id], ddb);
+			}
+#endif
 		return;
 	}
 
@@ -5629,8 +5641,11 @@ static void skl_atomic_update_crtc_wm(struct intel_atomic_state *state,
 		//if (plane_id == PLANE_CURSOR) skl_write_cursor_wm(crtc, &pipe_wm->planes[plane_id], ddb);
 		//
 		if (dev_priv->gvt &&
-			dev_priv->gvt->pipe_info[pipe].plane_owner[plane_id])
+			dev_priv->gvt->pipe_info[pipe].plane_owner[plane_id]) {
+			DRM_DEBUG_DRIVER(" bypass for pipe:%d plane:%d  Owner:%d\n", pipe, plane_id,
+				dev_priv->gvt->pipe_info[pipe].plane_owner[plane_id]);
 			return;
+		}
 #endif
 		if (plane_id != PLANE_CURSOR)
 			skl_write_plane_wm(crtc, &pipe_wm->planes[plane_id],
@@ -5639,6 +5654,7 @@ static void skl_atomic_update_crtc_wm(struct intel_atomic_state *state,
 			skl_write_cursor_wm(crtc, &pipe_wm->planes[plane_id],
 					    ddb);
 	}
+	DRM_DEBUG_DRIVER(" End of update CRTC: %d watermark\n", pipe);
 }
 
 static void skl_initial_wm(struct intel_atomic_state *state,
@@ -5656,9 +5672,10 @@ static void skl_initial_wm(struct intel_atomic_state *state,
 
 	mutex_lock(&dev_priv->wm.wm_mutex);
 
-	if (cstate->base.active_changed)
+	if (cstate->base.active_changed) {
+		DRM_DEBUG_DRIVER(" update crtc wm for crtc_state changed!\n");
 		skl_atomic_update_crtc_wm(state, cstate);
-
+	}
 	skl_copy_ddb_for_pipe(hw_vals, results, pipe);
 
 	mutex_unlock(&dev_priv->wm.wm_mutex);
