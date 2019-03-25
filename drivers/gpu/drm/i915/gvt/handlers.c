@@ -3061,6 +3061,43 @@ static int skl_cursor_mmio_read(struct intel_vgpu *vgpu, unsigned int offset,
 }
 
 
+static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
+		void *p_data, unsigned int bytes)
+{
+	struct drm_i915_private *dev_priv = vgpu->gvt->dev_priv;
+	unsigned int pipe = SKL_PLANE_REG_TO_PIPE(offset);
+	unsigned int plane = SKL_PLANE_REG_TO_PLANE(offset);
+
+	u32 old_value = vgpu_vreg(vgpu, offset);
+	write_vreg(vgpu, offset, p_data, bytes);
+
+	DRM_DEBUG_DRIVER("wm ddb write for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
+	vgpu->id, pipe, offset,
+	old_value, vgpu_vreg(vgpu, offset));
+	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
+			(vgpu->gvt->pipe_info[pipe].plane_owner[plane] == vgpu->id)) {
+		DRM_DEBUG_DRIVER("no touch hw water pm\n");
+		//I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
+	}
+
+	return 0;
+}
+
+
+
+static int skl_ddb_mmio_read(struct intel_vgpu *vgpu, unsigned int offset,
+		void *p_data, unsigned int bytes)
+{
+	unsigned int pipe = SKL_PLANE_REG_TO_PIPE(offset);
+
+	read_vreg(vgpu, offset, p_data, bytes);
+
+	DRM_DEBUG_DRIVER("wm ddb read for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x\n",
+			vgpu->id, pipe, offset, vgpu_vreg(vgpu, offset));
+
+	return 0;
+}
+
 #define MMIO_PIPES_SDH(prefix, plane, s, d, r, w) do { \
 	int pipe; \
 	for_each_pipe(dev_priv, pipe) \
@@ -3211,9 +3248,9 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 		MMIO_PLANES_DH(PLANE_WM_TRANS, D_SKL_PLUS, NULL, skl_plane_mmio_write);
 	}
 
-	MMIO_PLANES_DH(PLANE_NV12_BUF_CFG, D_SKL_PLUS, NULL,
-		       pv_plane_wm_mmio_write);
-	MMIO_PLANES_DH(PLANE_BUF_CFG, D_SKL_PLUS, NULL, NULL);
+	MMIO_PLANES_DH(PLANE_NV12_BUF_CFG, D_SKL_PLUS, skl_ddb_mmio_read,
+		       skl_ddb_mmio_write);
+	MMIO_PLANES_DH(PLANE_BUF_CFG, D_SKL_PLUS, skl_ddb_mmio_read, skl_ddb_mmio_write);
 
 
 	MMIO_DH(CURCNTR(PIPE_A), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
@@ -3237,9 +3274,9 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_DH(_MMIO(0x720ac), D_SKL_PLUS, skl_cursor_mmio_read, NULL);
 
 
-	MMIO_DH(CUR_BUF_CFG(PIPE_A), D_SKL_PLUS, NULL, NULL);
-	MMIO_DH(CUR_BUF_CFG(PIPE_B), D_SKL_PLUS, NULL, NULL);
-	MMIO_DH(CUR_BUF_CFG(PIPE_C), D_SKL_PLUS, NULL, NULL);
+	MMIO_DH(CUR_BUF_CFG(PIPE_A), D_SKL_PLUS, skl_ddb_mmio_read, skl_ddb_mmio_write);
+	MMIO_DH(CUR_BUF_CFG(PIPE_B), D_SKL_PLUS, skl_ddb_mmio_read, skl_ddb_mmio_write);
+	MMIO_DH(CUR_BUF_CFG(PIPE_C), D_SKL_PLUS, skl_ddb_mmio_read, skl_ddb_mmio_write);
 
 	MMIO_F(CUR_WM(PIPE_A, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, NULL, NULL);
 	MMIO_F(CUR_WM(PIPE_B, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, NULL, NULL);
