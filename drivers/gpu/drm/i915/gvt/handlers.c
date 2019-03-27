@@ -3004,8 +3004,7 @@ static int skl_cursor_surf_write(struct intel_vgpu *vgpu, unsigned int offset,
 
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[0] == vgpu->id)) {
-		;
-		//I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
+		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
 	if ( surf_base == 0 || surf_base != vgpu_vreg(vgpu, offset))
@@ -3030,8 +3029,7 @@ static int skl_cursor_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 	write_vreg(vgpu, offset, p_data, bytes);
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[0] == vgpu->id)) {
-		;
-		//I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
+		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
 	if ( surf_base == 0 || surf_base != vgpu_vreg(vgpu, offset)) {
@@ -3240,7 +3238,7 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_PLANES_DH(PLANE_AUX_DIST, D_SKL_PLUS, NULL, skl_plane_mmio_write);
 	MMIO_PLANES_DH(PLANE_AUX_OFFSET, D_SKL_PLUS, NULL, skl_plane_mmio_write);
 
-	if (0 && i915_modparams.avail_planes_per_pipe) {
+	if (i915_modparams.avail_planes_per_pipe) {
 		MMIO_PLANES_SDH(PLANE_WM_BASE, 4 * 8, D_SKL_PLUS, NULL, NULL);
 		MMIO_PLANES_DH(PLANE_WM_TRANS, D_SKL_PLUS, NULL, NULL);
 	} else {
@@ -3248,9 +3246,9 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 		MMIO_PLANES_DH(PLANE_WM_TRANS, D_SKL_PLUS, NULL, skl_plane_mmio_write);
 	}
 
-	MMIO_PLANES_DH(PLANE_NV12_BUF_CFG, D_SKL_PLUS, skl_ddb_mmio_read,
-		       skl_ddb_mmio_write);
-	MMIO_PLANES_DH(PLANE_BUF_CFG, D_SKL_PLUS, skl_ddb_mmio_read, skl_ddb_mmio_write);
+	MMIO_PLANES_DH(PLANE_NV12_BUF_CFG, D_SKL_PLUS, NULL,
+		       pv_plane_wm_mmio_write);
+	MMIO_PLANES_DH(PLANE_BUF_CFG, D_SKL_PLUS, skl_ddb_mmio_read, NULL);
 
 
 	MMIO_DH(CURCNTR(PIPE_A), D_SKL_PLUS, NULL, skl_cursor_mmio_write);

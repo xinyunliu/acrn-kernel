@@ -71,7 +71,7 @@ int pipe_is_enabled(struct intel_vgpu *vgpu, int pipe)
 {
 	struct drm_i915_private *dev_priv = vgpu->gvt->dev_priv;
 
-	if (WARN_ON(pipe < PIPE_A || pipe >= I915_MAX_PIPES))
+	if (WARN_ON(pipe < PIPE_A || pipe >= INTEL_INFO(dev_priv)->num_pipes))
 		return -EINVAL;
 
 	if (vgpu_vreg_t(vgpu, PIPECONF(pipe)) & PIPECONF_ENABLE)
@@ -393,7 +393,7 @@ void intel_gvt_check_vblank_emulation(struct intel_gvt *gvt)
 	mutex_lock(&gvt->lock);
 	for_each_active_vgpu(gvt, vgpu, id) {
 		for (pipe = 0; pipe < I915_MAX_PIPES; pipe++) {
-			if (pipe_is_enabled(vgpu, pipe)) {
+			if (pipe_is_enabled(vgpu, pipe) == 1) {
 				found = true;
 				break;
 			}
@@ -423,7 +423,7 @@ static void emulate_vblank_on_pipe(struct intel_vgpu *vgpu, int pipe)
 	};
 	int event;
 
-	if (pipe < PIPE_A || pipe > PIPE_C)
+	if (pipe < PIPE_A || pipe >= INTEL_INFO(dev_priv)->num_pipes)
 		return;
 
 	for_each_set_bit(event, irq->flip_done_event[pipe],
@@ -436,7 +436,7 @@ static void emulate_vblank_on_pipe(struct intel_vgpu *vgpu, int pipe)
 		intel_vgpu_trigger_virtual_event(vgpu, event);
 	}
 
-	if (pipe_is_enabled(vgpu, pipe)) {
+	if (pipe_is_enabled(vgpu, pipe)==1) {
 		vgpu_vreg_t(vgpu, PIPE_FRMCOUNT_G4X(pipe))++;
 		intel_vgpu_trigger_virtual_event(vgpu, vblank_event[pipe]);
 	}
