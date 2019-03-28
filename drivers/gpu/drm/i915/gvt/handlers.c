@@ -3004,6 +3004,7 @@ static int skl_cursor_surf_write(struct intel_vgpu *vgpu, unsigned int offset,
 
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[0] == vgpu->id)) {
+		DRM_DEBUG_DRIVER("bypass curosr\n"); return 0;
 		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
@@ -3029,7 +3030,8 @@ static int skl_cursor_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 	write_vreg(vgpu, offset, p_data, bytes);
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[0] == vgpu->id)) {
-		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
+		DRM_DEBUG_DRIVER("bypass curosr\n"); return 0;
+		//I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
 	if ( surf_base == 0 || surf_base != vgpu_vreg(vgpu, offset)) {
@@ -3072,10 +3074,10 @@ static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 	DRM_DEBUG_DRIVER("wm ddb write for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
 	vgpu->id, pipe, offset,
 	old_value, vgpu_vreg(vgpu, offset));
+
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[plane] == vgpu->id)) {
 		DRM_DEBUG_DRIVER("no touch hw water pm\n");
-		//I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
 	return 0;
@@ -3238,7 +3240,7 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_PLANES_DH(PLANE_AUX_DIST, D_SKL_PLUS, NULL, skl_plane_mmio_write);
 	MMIO_PLANES_DH(PLANE_AUX_OFFSET, D_SKL_PLUS, NULL, skl_plane_mmio_write);
 
-	if (i915_modparams.avail_planes_per_pipe) {
+	if (0 && i915_modparams.avail_planes_per_pipe) {
 		MMIO_PLANES_SDH(PLANE_WM_BASE, 4 * 8, D_SKL_PLUS, NULL, NULL);
 		MMIO_PLANES_DH(PLANE_WM_TRANS, D_SKL_PLUS, NULL, NULL);
 	} else {
