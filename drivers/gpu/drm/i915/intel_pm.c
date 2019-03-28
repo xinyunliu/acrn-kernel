@@ -5006,8 +5006,8 @@ static int skl_build_plane_wm(struct intel_crtc_state *cstate,
 }
 
 static int skl_build_pipe_all_plane_wm(struct intel_crtc_state *cstate,
-			     struct skl_ddb_allocation *ddb,
-			     struct skl_pipe_wm *pipe_wm)
+			     struct skl_ddb_allocation *ddb, /* out */
+			     struct skl_pipe_wm *pipe_wm /* out */)
 {
 	struct drm_device *dev = cstate->base.crtc->dev;
 	const struct drm_i915_private *dev_priv = to_i915(dev);
@@ -5020,8 +5020,6 @@ static int skl_build_pipe_all_plane_wm(struct intel_crtc_state *cstate,
 	int plane_id;
 	int ret;
 
-	memset(pipe_wm->planes, 0, sizeof(pipe_wm->planes));
-
 	/*
 	 * Since Dom0 may not own all planes on this pipe, there will
 	 * not be a valid intel_plane for the planes it doesn't own.
@@ -5030,6 +5028,7 @@ static int skl_build_pipe_all_plane_wm(struct intel_crtc_state *cstate,
 	 * and hence will use width and height from the crtc and will
 	 * also assume cpp = 4 and tiling = x_tiled.
 	 */
+	memset(pipe_wm->planes, 0, sizeof(pipe_wm->planes));
 	for_each_universal_plane(dev_priv, pipe, plane_id) {
 		intel_pstate = NULL;
 
@@ -5051,8 +5050,8 @@ static int skl_build_pipe_all_plane_wm(struct intel_crtc_state *cstate,
 }
 
 static int skl_build_pipe_wm(struct intel_crtc_state *cstate,
-			     struct skl_ddb_allocation *ddb,
-			     struct skl_pipe_wm *pipe_wm)
+			     struct skl_ddb_allocation *ddb, /* out */
+			     struct skl_pipe_wm *pipe_wm /* out */)
 {
 	struct drm_crtc_state *crtc_state = &cstate->base;
 	struct drm_plane *plane;
@@ -5429,7 +5428,7 @@ skl_print_wm_changes(const struct drm_atomic_state *state)
 			if (skl_ddb_entry_equal(old, new))
 				continue;
 
-			DRM_DEBUG_ATOMIC("[PLANE:%d:%s] ddb (%d - %d) -> (%d - %d)\n",
+			DRM_DEBUG_KMS("[PLANE:%d:%s] ddb (%d - %d) -> (%d - %d)\n",
 					 intel_plane->base.base.id,
 					 intel_plane->base.name,
 					 old->start, old->end,
