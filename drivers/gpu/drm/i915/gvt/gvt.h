@@ -240,6 +240,9 @@ struct intel_vgpu {
 	unsigned long long *cached_guest_entry;
 	bool ge_cache_enable;
 	bool entire_nonctxmmio_checked;
+
+	/* watermark for vgpu, 1 vgpu has n pipes */
+	struct skl_pipe_wm wm[I915_MAX_PIPES];
 };
 
 /* validating GM healthy status*/
@@ -767,7 +770,8 @@ void *intel_gvt_allocate_vreg(struct intel_vgpu *vgpu);
 void intel_gvt_free_vreg(struct intel_vgpu *vgpu);
 
 bool is_force_nonpriv_mmio(unsigned int offset);
-
+void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
+		struct intel_crtc *intel_crtc, enum plane_id plane);
 #include "trace.h"
 #include "mpt.h"
 

@@ -3060,14 +3060,61 @@ static int skl_cursor_mmio_read(struct intel_vgpu *vgpu, unsigned int offset,
 	return 0;
 }
 
+static void skl_dump_cursor_ddb(struct drm_i915_private *dev_priv,
+		struct skl_ddb_entry *entry, u32 reg)
+{
+	/* skl_ddb_entry_init_from_hw()
 
+	  val = I915_READ(CUR_BUF_CFG(pipe));
+	  skl_ddb_entry_init_from_hw(dev_priv,&ddb->plane[pipe][plane_id], val);
+	*/
+
+	u16 mask;
+
+	if (INTEL_GEN(dev_priv) >= 11)
+			mask = ICL_DDB_ENTRY_MASK;
+	else
+			mask = SKL_DDB_ENTRY_MASK;
+	entry->start = reg & mask;
+	entry->end = (reg >> DDB_ENTRY_END_SHIFT) & mask;
+
+	if (entry->end)
+			entry->end += 1;
+}
+
+
+static void skl_dump_cursor_wm(uint32_t val, struct skl_wm_level *level)
+{
+/*	static inline void skl_wm_level_from_reg_val(uint32_t val,
+							 struct skl_wm_level *level)
+
+	if (plane_id != PLANE_CURSOR)
+		val = I915_READ(PLANE_WM(pipe, plane_id, level));
+	else
+		val = I915_READ(CUR_WM(pipe, level));
+	skl_wm_level_from_reg_val(val, &wm->wm[level]);
+
+	if (plane_id != PLANE_CURSOR)
+		val = I915_READ(PLANE_WM_TRANS(pipe, plane_id));
+	else
+		val = I915_READ(CUR_WM_TRANS(pipe));
+	skl_wm_level_from_reg_val(val, &wm->trans_wm);
+
+*/
+
+    level->plane_en = val & PLANE_WM_EN;
+	level->plane_res_b = val & PLANE_WM_BLOCKS_MASK;
+	level->plane_res_l = (val >> PLANE_WM_LINES_SHIFT) & PLANE_WM_LINES_MASK;
+
+}
 static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 		void *p_data, unsigned int bytes)
 {
 	struct drm_i915_private *dev_priv = vgpu->gvt->dev_priv;
+	struct drm_device *drm_dev = &dev_priv->drm;
+	struct intel_crtc *intel_crtc = NULL;
+	struct intel_crtc_state *intel_cstate = NULL;
 	unsigned int pipe = SKL_PLANE_REG_TO_PIPE(offset);
-	unsigned int plane = SKL_PLANE_REG_TO_PLANE(offset);
-
 	u32 old_value = vgpu_vreg(vgpu, offset);
 	write_vreg(vgpu, offset, p_data, bytes);
 
@@ -3075,13 +3122,35 @@ static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 	vgpu->id, pipe, offset,
 	old_value, vgpu_vreg(vgpu, offset));
 
+	if (pipe == PIPE_A) {
+
+		for_each_intel_crtc(drm_dev, intel_crtc) {
+			drm_modeset_lock(&intel_crtc->base.mutex, NULL);
+			if (PIPE_A == intel_crtc->pipe)
+				break;
+			drm_modeset_unlock(&intel_crtc->base.mutex);
+		}
+		if (!intel_crtc) {
+			DRM_DEBUG_DRIVER("Not Found intel_crtc for ddb mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
+				    vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
+			return 0;
+		} else {
+				DRM_DEBUG_DRIVER("Found intel_crtc for ddb mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
+				    vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
+		}
+
+	}
+
+	//intel_cstate = to_intel_crtc_state(intel_crtc->base.state);
+
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
-			(vgpu->gvt->pipe_info[pipe].plane_owner[plane] == vgpu->id)) {
-		DRM_DEBUG_DRIVER("no touch hw water pm\n");
+			(vgpu->gvt->pipe_info[pipe].plane_owner[PRIMARY_PLANE] == vgpu->id)) {
+		intel_vgpu_update_plane_wm(vgpu, intel_crtc, PLANE_CURSOR);
 	}
 
 	return 0;
 }
+
 
 
 
@@ -3253,9 +3322,9 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_PLANES_DH(PLANE_BUF_CFG, D_SKL_PLUS, skl_ddb_mmio_read, NULL);
 
 
-	MMIO_DH(CURCNTR(PIPE_A), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
-	MMIO_DH(CURCNTR(PIPE_B), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
-	MMIO_DH(CURCNTR(PIPE_C), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
+	MMIO_DH(CURCNTR(PIPE_A), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
+	MMIO_DH(CURCNTR(PIPE_B), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
+	MMIO_DH(CURCNTR(PIPE_C), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
 
 	MMIO_DH(CURPOS(PIPE_A), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
 	MMIO_DH(CURPOS(PIPE_B), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
@@ -3265,18 +3334,18 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_DH(CURBASE(PIPE_B), D_SKL_PLUS, NULL, skl_cursor_surf_write);
 	MMIO_DH(CURBASE(PIPE_C), D_SKL_PLUS, NULL, skl_cursor_surf_write);
 
-	MMIO_DH(CUR_FBC_CTL(PIPE_A), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
-	MMIO_DH(CUR_FBC_CTL(PIPE_B), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
-	MMIO_DH(CUR_FBC_CTL(PIPE_C), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
+	MMIO_DH(CUR_FBC_CTL(PIPE_A), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
+	MMIO_DH(CUR_FBC_CTL(PIPE_B), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
+	MMIO_DH(CUR_FBC_CTL(PIPE_C), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
 
 	MMIO_DH(_MMIO(0x700ac), D_SKL_PLUS, skl_cursor_mmio_read, NULL);
 	MMIO_DH(_MMIO(0x710ac), D_SKL_PLUS, skl_cursor_mmio_read, NULL);
 	MMIO_DH(_MMIO(0x720ac), D_SKL_PLUS, skl_cursor_mmio_read, NULL);
 
 
-	MMIO_DH(CUR_BUF_CFG(PIPE_A), D_SKL_PLUS, skl_ddb_mmio_read, skl_ddb_mmio_write);
-	MMIO_DH(CUR_BUF_CFG(PIPE_B), D_SKL_PLUS, skl_ddb_mmio_read, skl_ddb_mmio_write);
-	MMIO_DH(CUR_BUF_CFG(PIPE_C), D_SKL_PLUS, skl_ddb_mmio_read, skl_ddb_mmio_write);
+	MMIO_DH(CUR_BUF_CFG(PIPE_A), D_SKL_PLUS, skl_ddb_mmio_read, NULL);
+	MMIO_DH(CUR_BUF_CFG(PIPE_B), D_SKL_PLUS, skl_ddb_mmio_read, NULL);
+	MMIO_DH(CUR_BUF_CFG(PIPE_C), D_SKL_PLUS, skl_ddb_mmio_read, NULL);
 
 	MMIO_F(CUR_WM(PIPE_A, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, NULL, NULL);
 	MMIO_F(CUR_WM(PIPE_B, 0), 4 * 8, 0, 0, 0, D_SKL_PLUS, NULL, NULL);

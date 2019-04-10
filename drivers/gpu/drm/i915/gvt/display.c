@@ -637,3 +637,304 @@ void intel_vgpu_reset_display(struct intel_vgpu *vgpu)
 {
 	emulate_monitor_status_change(vgpu);
 }
+
+
+
+int skl_format_to_fourcc(int format, bool rgb_order, bool alpha);
+uint_fixed_16_16_t
+skl_wm_method1(const struct drm_i915_private *dev_priv, uint32_t pixel_rate,
+	       uint8_t cpp, uint32_t latency, uint32_t dbuf_block_size);
+uint_fixed_16_16_t
+skl_wm_method2(uint32_t pixel_rate,
+	       uint32_t pipe_htotal,
+	       uint32_t latency,
+	       uint_fixed_16_16_t plane_blocks_per_line);
+uint_fixed_16_16_t intel_get_linetime_us(struct intel_crtc_state *cstate);
+
+
+int
+vgpu_compute_plane_wm_params(struct intel_vgpu *vgpu,
+			    struct intel_crtc_state *intel_cstate,
+			    enum pipe pipe,
+			    enum plane_id plane,
+			    struct skl_wm_params *wp)
+{
+	struct intel_gvt *gvt = vgpu->gvt;
+	struct drm_i915_private *dev_priv = gvt->dev_priv;
+	struct intel_crtc *crtc = to_intel_crtc(intel_cstate->base.crtc);
+	struct intel_plane *prim_plane = to_intel_plane(crtc->base.primary);
+	struct intel_plane_state *prim_pstate = to_intel_plane_state(prim_plane->base.state);
+	uint32_t interm_pbpl;
+	u64 original_pixel_rate;
+	uint_fixed_16_16_t downscale_amount;
+	u32 pipe_src_w, pipe_src_h, src_w, src_h, dst_w, dst_h;
+	uint_fixed_16_16_t fp_w_ratio, fp_h_ratio;
+	uint_fixed_16_16_t downscale_h, downscale_w;
+	bool apply_memory_bw_wa = IS_GEN9_BC(dev_priv) || IS_BROXTON(dev_priv);
+	bool rot_90_or_270;
+	int scaler, plane_scaler;
+	u32 reg_val;
+
+	if (!intel_cstate->base.active || !prim_pstate->base.visible)  {
+		DRM_DEBUG_DRIVER("intel_cstate is not active\n");
+		return 0;
+	}
+
+	//reg_val = vgpu_vreg_t(vgpu, PIPESRC(vgpu->transcoder)); //PIPESRC(crtc->pipe)
+	reg_val = vgpu_vreg_t(vgpu, PIPESRC(pipe));
+	pipe_src_w = ((reg_val >> 16) & 0xfff) + 1;
+	pipe_src_h = (reg_val & 0xfff) + 1;
+	original_pixel_rate = intel_cstate->pixel_rate;
+
+	rot_90_or_270 = false;
+	if (plane != PLANE_CURSOR)
+		return -1;
+
+	if (plane == PLANE_CURSOR) {
+		reg_val = vgpu_vreg_t(vgpu, CURCNTR(pipe));
+		switch (reg_val & SKL_CURSOR_MODE_MASK) {
+		case 0x04:
+		case 0x05:
+		case 0x06:
+		case 0x07:
+		case 0x24:
+		case 0x27:
+			wp->width = 64;
+			break;
+		case 0x02:
+		case 0x22:
+		case 0x25:
+			wp->width = 128;
+			break;
+		case 0x03:
+		case 0x23:
+		case 0x26:
+			wp->width = 256;
+			break;
+		case 0:
+			wp->width = 0;
+			gvt_dbg_dpy("vgpu-%d: pipe(%d) HW cursor is disabled\n",
+				    vgpu->id, pipe);
+			return 0;
+		default:
+			wp->width = 0;
+			gvt_dbg_dpy("vgpu-%d: pipe(%d) unsupported HW cursor mode %x\n",
+				    vgpu->id, pipe, reg_val & SKL_CURSOR_MODE_MASK);
+			return 0;
+		}
+
+		// Cursor is always linear
+		wp->x_tiled = 0;
+		wp->y_tiled = 0;
+		wp->rc_surface = 0;
+
+		switch (reg_val & SKL_CURSOR_MODE_MASK) {
+		// 32bpp AND/INVERT
+		case 0x02:
+		case 0x03:
+		case 0x07:
+		// 32bpp ARGB
+		case 0x22:
+		case 0x23:
+		case 0x27:
+		// 32bpp AND/XOR
+		case 0x24:
+		case 0x25:
+		case 0x26:
+			wp->cpp = 4;
+			break;
+		// 2bpp 3/2/4 color
+		case 0x04:
+		case 0x05:
+		case 0x06:
+		default:
+			wp->width = 0;
+			wp->cpp = 0;
+			gvt_dbg_dpy("vgpu-%d: pipe(%d) unsupported HW cursor format %x\n",
+				    vgpu->id, pipe, reg_val & SKL_CURSOR_MODE_MASK);
+			return 0;
+		}
+	} else {
+		return -1;
+	}
+
+	if (plane == PLANE_CURSOR) {
+		src_w = wp->width;
+		src_h = wp->width;
+	} else {
+		return 0;
+	}
+
+	// Assume host scaler has been rebuilt for vgpu
+	plane_scaler = -1;
+
+	for (scaler = 0; scaler < crtc->num_scalers; scaler++) {
+		reg_val = vgpu_vreg_t(vgpu, SKL_PS_CTRL(pipe, scaler));
+
+		if (reg_val & PS_SCALER_EN &&
+		    (reg_val & PS_PLANE_SEL(plane) ||
+		    !(reg_val & PS_PLANE_SEL_MASK))) {
+			plane_scaler = scaler;
+			break;
+		}
+	}
+
+
+	if (plane_scaler >= 0) {
+		//reg_val = vgpu->ps_conf[vgpu_pipe].win_size[scaler];
+		// find the enabled scaler for the pipe
+		// get the scaler size
+		reg_val = vgpu_vreg_t(vgpu, SKL_PS_CTRL(pipe, scaler));
+		reg_val = vgpu_vreg_t(vgpu, SKL_PS_WIN_SZ(pipe, scaler));
+		dst_w = reg_val >> 16 & 0xfff;
+		dst_h = reg_val & 0xfff;
+	} else {
+		dst_w = prim_pstate->base.crtc_w;
+		dst_h = prim_pstate->base.crtc_h;
+	}
+
+	fp_w_ratio = div_fixed16(src_w, dst_w);
+	fp_h_ratio = div_fixed16(src_h, dst_h);
+	downscale_w = max_fixed16(fp_w_ratio, u32_to_fixed16(1));
+	downscale_h = max_fixed16(fp_h_ratio, u32_to_fixed16(1));
+	downscale_amount = mul_fixed16(downscale_w, downscale_h);
+
+	wp->plane_pixel_rate = mul_round_up_u32_fixed16(original_pixel_rate,
+						    downscale_amount);
+
+	DRM_DEBUG_DRIVER("vgpu-%d: pipe(%d), plane(%d), plane_ctl(%08x), scaler-%d, pipe src(%dx%d) src(%dx%d)->dst(%dx%d), pixel rate(%lld->%d)\n",
+		    vgpu->id, pipe, plane,
+		    (plane == PLANE_CURSOR) ? vgpu_vreg_t(vgpu, CURCNTR(pipe)) : vgpu_vreg_t(vgpu, PLANE_CTL(pipe, plane)),
+		    plane_scaler, pipe_src_w, pipe_src_h,
+		    src_w, src_h, dst_w, dst_h, original_pixel_rate, wp->plane_pixel_rate);
+
+	reg_val = vgpu_vreg_t(vgpu, PLANE_CTL(pipe, plane));
+	if (INTEL_GEN(dev_priv) >= 11 &&
+	    plane != PLANE_CURSOR &&
+	    !(reg_val & PLANE_CTL_DECOMPRESSION_ENABLE) &&
+	    (reg_val & PLANE_CTL_TILED_YF) &&
+	    wp->cpp == 8)
+		wp->dbuf_block_size = 256;
+	else
+		wp->dbuf_block_size = 512;
+
+	if (rot_90_or_270) {
+		switch (wp->cpp) {
+		case 1:
+			wp->y_min_scanlines = 16;
+			break;
+		case 2:
+			wp->y_min_scanlines = 8;
+			break;
+		case 4:
+			wp->y_min_scanlines = 4;
+			break;
+		default:
+			MISSING_CASE(wp->cpp);
+			return -EINVAL;
+		}
+	} else {
+		wp->y_min_scanlines = 4;
+	}
+
+	if (apply_memory_bw_wa)
+		wp->y_min_scanlines *= 2;
+
+	wp->plane_bytes_per_line = wp->width * wp->cpp;
+	if (wp->y_tiled) {
+		interm_pbpl = DIV_ROUND_UP(wp->plane_bytes_per_line *
+					   wp->y_min_scanlines,
+					   wp->dbuf_block_size);
+
+		if (INTEL_GEN(dev_priv) >= 10)
+			interm_pbpl++;
+
+		wp->plane_blocks_per_line = div_fixed16(interm_pbpl,
+							wp->y_min_scanlines);
+	} else if (wp->x_tiled && IS_GEN9(dev_priv)) {
+		interm_pbpl = DIV_ROUND_UP(wp->plane_bytes_per_line,
+					   wp->dbuf_block_size);
+		wp->plane_blocks_per_line = u32_to_fixed16(interm_pbpl);
+	} else {
+		interm_pbpl = DIV_ROUND_UP(wp->plane_bytes_per_line,
+					   wp->dbuf_block_size) + 1;
+		wp->plane_blocks_per_line = u32_to_fixed16(interm_pbpl);
+	}
+
+	wp->y_tile_minimum = mul_u32_fixed16(wp->y_min_scanlines,
+					     wp->plane_blocks_per_line);
+	wp->linetime_us = fixed16_to_u32_round_up(
+					intel_get_linetime_us(intel_cstate));
+
+	DRM_DEBUG_DRIVER("vgpu-%d: pipe(%d), plane(%d), x_tiled(%d), y_tiled(%d), rc_surface(%d), width(%x), cpp(%x), "
+		    "plane_pixel_rate(%d), y_min_scanlines(%x), plane_bytes_per_line(%x), plane_blocks_per_line(%x), "
+		    "y_tile_minimum(%x), linetime_us(%x), dbuf_block_size(%x)\n",
+		    vgpu->id, pipe, plane, wp->x_tiled, wp->y_tiled, wp->rc_surface, wp->width, wp->cpp,
+		    wp->plane_pixel_rate, wp->y_min_scanlines, wp->plane_bytes_per_line, wp->plane_blocks_per_line.val,
+		    wp->y_tile_minimum.val, wp->linetime_us, wp->dbuf_block_size);
+
+	return 0;
+}
+
+
+void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
+		struct intel_crtc *intel_crtc, enum plane_id plane)
+{
+	struct intel_gvt *gvt = vgpu->gvt;
+	struct drm_i915_private *dev_priv = gvt->dev_priv;
+	struct intel_crtc_state *intel_cstate = to_intel_crtc_state(intel_crtc->base.state);
+	struct drm_atomic_state *drm_state = intel_cstate->base.state;
+	struct intel_atomic_state *intel_state = to_intel_atomic_state(drm_state);
+
+	struct skl_plane_wm *wm;
+	struct skl_wm_params wm_params;
+
+
+	struct skl_ddb_allocation *ddb_sw = &intel_state->wm_results.ddb;
+	struct skl_ddb_allocation *ddb_hw = &dev_priv->wm.skl_hw.ddb;
+
+	/* PIPE_A, PLANE_CURSOR */
+	enum pipe vgpu_pipe = PIPE_A;
+	enum pipe host_pipe = PIPE_A;
+	u16 ddb_blocks;
+	int level, max_level = ilk_wm_max_level(dev_priv);
+
+	int ret;
+
+	if (!intel_crtc) {
+		return;
+	}
+
+	vgpu_compute_plane_wm_params(vgpu, intel_cstate, intel_crtc->pipe, plane, &wm_params);
+/*
+	wm = &vgpu->wm[vgpu_pipe].planes[plane];
+	ddb_blocks = skl_ddb_entry_size(&ddb_sw->plane[host_pipe][plane]);
+	memset(&wm_params, 0, sizeof(struct skl_wm_params));
+	ret = vgpu_compute_plane_wm_params(vgpu, intel_cstate,
+						  plane, &wm_params);
+
+	for (level = 0; level <= max_level; level++) {
+		ret = vgpu_compute_plane_wm(vgpu,
+					    intel_cstate,
+					    plane,
+					    ddb_blocks,
+					    level,
+					    &wm_params,
+					    &wm->wm[level].plane_res_b,
+					    &wm->wm[level].plane_res_l,
+					    &wm->wm[level].plane_en);
+		gvt_dbg_dpy("vgpu-%d: pipe(%d->%d), plane(%d), level(%d), wm(%x)\n",
+			    vgpu->id, vgpu_pipe, host_pipe, plane, level,
+			    vgpu_calc_wm_level(&wm->wm[level]));
+		if (ret)
+			break;
+	}
+
+	skl_compute_transition_wm(intel_cstate, &wm_params,
+		&wm->wm[0], ddb_blocks, &wm->trans_wm);
+	gvt_dbg_dpy("vgpu-%d: pipe(%d->%d), plane(%d), wm_trans(%x)\n",
+		    vgpu->id, vgpu_pipe, host_pipe, plane,
+		    vgpu_calc_wm_level(&wm->trans_wm));
+*/
+
+}

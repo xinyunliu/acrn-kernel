@@ -4458,7 +4458,7 @@ skl_allocate_pipe_ddb(struct intel_crtc_state *cstate,
  * should allow pixel_rate up to ~2 GHz which seems sufficient since max
  * 2xcdclk is 1350 MHz and the pixel rate should never exceed that.
 */
-static uint_fixed_16_16_t
+uint_fixed_16_16_t
 skl_wm_method1(const struct drm_i915_private *dev_priv, uint32_t pixel_rate,
 	       uint8_t cpp, uint32_t latency, uint32_t dbuf_block_size)
 {
@@ -4477,7 +4477,7 @@ skl_wm_method1(const struct drm_i915_private *dev_priv, uint32_t pixel_rate,
 	return ret;
 }
 
-static uint_fixed_16_16_t skl_wm_method2(uint32_t pixel_rate,
+uint_fixed_16_16_t skl_wm_method2(uint32_t pixel_rate,
 			uint32_t pipe_htotal,
 			uint32_t latency,
 			uint_fixed_16_16_t plane_blocks_per_line)
@@ -4495,7 +4495,7 @@ static uint_fixed_16_16_t skl_wm_method2(uint32_t pixel_rate,
 	return ret;
 }
 
-static uint_fixed_16_16_t
+uint_fixed_16_16_t
 intel_get_linetime_us(struct intel_crtc_state *cstate)
 {
 	uint32_t pixel_rate;
@@ -5069,6 +5069,8 @@ static int skl_build_pipe_wm(struct intel_crtc_state *cstate,
 						to_intel_plane_state(pstate);
 		enum plane_id plane_id = to_intel_plane(plane)->id;
 		enum pipe pipe = to_intel_crtc(cstate->base.crtc)->pipe;
+
+		DRM_DEBUG_DRIVER("pipe: %c Plane: %c\n", pipe_name(pipe), plane_name(plane_id));
 
 		ret = skl_build_plane_wm(cstate, ddb, pipe_wm,
 				pipe, plane_id, (struct intel_plane_state *) intel_pstate);
