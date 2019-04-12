@@ -3060,53 +3060,12 @@ static int skl_cursor_mmio_read(struct intel_vgpu *vgpu, unsigned int offset,
 	return 0;
 }
 
-static void skl_dump_cursor_ddb(struct drm_i915_private *dev_priv,
-		struct skl_ddb_entry *entry, u32 reg)
-{
-	/* skl_ddb_entry_init_from_hw()
+void skl_dump_cursor_ddb(struct drm_i915_private *dev_priv,
+		struct skl_ddb_entry *entry, u32 reg);
 
-	  val = I915_READ(CUR_BUF_CFG(pipe));
-	  skl_ddb_entry_init_from_hw(dev_priv,&ddb->plane[pipe][plane_id], val);
-	*/
-
-	u16 mask;
-
-	if (INTEL_GEN(dev_priv) >= 11)
-			mask = ICL_DDB_ENTRY_MASK;
-	else
-			mask = SKL_DDB_ENTRY_MASK;
-	entry->start = reg & mask;
-	entry->end = (reg >> DDB_ENTRY_END_SHIFT) & mask;
-
-	if (entry->end)
-			entry->end += 1;
-}
+void skl_dump_cursor_wm(uint32_t val, struct skl_wm_level *level);
 
 
-static void skl_dump_cursor_wm(uint32_t val, struct skl_wm_level *level)
-{
-/*	static inline void skl_wm_level_from_reg_val(uint32_t val,
-							 struct skl_wm_level *level)
-
-	if (plane_id != PLANE_CURSOR)
-		val = I915_READ(PLANE_WM(pipe, plane_id, level));
-	else
-		val = I915_READ(CUR_WM(pipe, level));
-	skl_wm_level_from_reg_val(val, &wm->wm[level]);
-
-	if (plane_id != PLANE_CURSOR)
-		val = I915_READ(PLANE_WM_TRANS(pipe, plane_id));
-	else
-		val = I915_READ(CUR_WM_TRANS(pipe));
-	skl_wm_level_from_reg_val(val, &wm->trans_wm);
-
-*/
-
-    level->plane_en = val & PLANE_WM_EN;
-	level->plane_res_b = val & PLANE_WM_BLOCKS_MASK;
-	level->plane_res_l = (val >> PLANE_WM_LINES_SHIFT) & PLANE_WM_LINES_MASK;
-
-}
 static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 		void *p_data, unsigned int bytes)
 {
@@ -3126,8 +3085,9 @@ static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 
 		for_each_intel_crtc(drm_dev, intel_crtc) {
 			drm_modeset_lock(&intel_crtc->base.mutex, NULL);
-			if (PIPE_A == intel_crtc->pipe)
+			if (PIPE_A == intel_crtc->pipe) {
 				break;
+			}
 			drm_modeset_unlock(&intel_crtc->base.mutex);
 		}
 		if (!intel_crtc) {
@@ -3145,8 +3105,10 @@ static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[PRIMARY_PLANE] == vgpu->id)) {
-		intel_vgpu_update_plane_wm(vgpu, intel_crtc, PLANE_CURSOR);
+		intel_vgpu_update_plane_wm(vgpu, intel_crtc, pipe, PLANE_CURSOR);
 	}
+
+	drm_modeset_unlock(&intel_crtc->base.mutex);
 
 	return 0;
 }

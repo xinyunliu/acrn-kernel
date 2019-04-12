@@ -652,6 +652,125 @@ skl_wm_method2(uint32_t pixel_rate,
 uint_fixed_16_16_t intel_get_linetime_us(struct intel_crtc_state *cstate);
 
 
+void skl_dump_cursor_ddb(struct drm_i915_private *dev_priv,
+		struct skl_ddb_entry *entry, u32 reg)
+{
+	/* skl_ddb_entry_init_from_hw()
+
+	  val = I915_READ(CUR_BUF_CFG(pipe));
+	  skl_ddb_entry_init_from_hw(dev_priv,&ddb->plane[pipe][plane_id], val);
+	*/
+
+	u16 mask;
+
+	if (INTEL_GEN(dev_priv) >= 11)
+			mask = ICL_DDB_ENTRY_MASK;
+	else
+			mask = SKL_DDB_ENTRY_MASK;
+	entry->start = reg & mask;
+	entry->end = (reg >> DDB_ENTRY_END_SHIFT) & mask;
+
+	if (entry->end)
+			entry->end += 1;
+}
+
+
+void skl_dump_cursor_wm(uint32_t val, struct skl_wm_level *level)
+{
+/*	static inline void skl_wm_level_from_reg_val(uint32_t val,
+							 struct skl_wm_level *level)
+
+	if (plane_id != PLANE_CURSOR)
+		val = I915_READ(PLANE_WM(pipe, plane_id, level));
+	else
+		val = I915_READ(CUR_WM(pipe, level));
+	skl_wm_level_from_reg_val(val, &wm->wm[level]);
+
+	if (plane_id != PLANE_CURSOR)
+		val = I915_READ(PLANE_WM_TRANS(pipe, plane_id));
+	else
+		val = I915_READ(CUR_WM_TRANS(pipe));
+	skl_wm_level_from_reg_val(val, &wm->trans_wm);
+
+*/
+
+    level->plane_en = val & PLANE_WM_EN;
+	level->plane_res_b = val & PLANE_WM_BLOCKS_MASK;
+	level->plane_res_l = (val >> PLANE_WM_LINES_SHIFT) & PLANE_WM_LINES_MASK;
+
+}
+
+
+
+
+void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
+{
+	struct intel_gvt *gvt = vgpu->gvt;
+	struct drm_i915_private *dev_priv = gvt->dev_priv;
+
+	u32 reg_val;
+	struct skl_ddb_entry ddb_c1;
+	struct skl_wm_level wm_vals[9];
+	
+	int i;
+
+	reg_val = vgpu_vreg_t(vgpu, CUR_BUF_CFG(pipe));	
+	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
+	
+	for(i=0; i<8; i++){
+		reg_val = vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, i));	
+		skl_dump_cursor_wm(reg_val, &wm_vals[i]);
+	}
+
+	reg_val = vgpu_vreg_t(vgpu, PLANE_WM_TRANS(pipe, PLANE_CURSOR));	
+	skl_dump_cursor_wm(reg_val, &wm_vals[8]);
+
+	DRM_DEBUG_DRIVER("dump watermark: pipe:%d plane:%d\n", pipe, PLANE_CURSOR);
+	DRM_DEBUG_DRIVER("cursor ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
+	DRM_DEBUG_DRIVER("cursor wm trans:  0x%x  enabled:%c\n", vgpu_vreg_t(vgpu, PLANE_WM_TRANS(pipe, PLANE_CURSOR)),
+						wm_vals[8].plane_en?'Y':'N');
+	DRM_DEBUG_DRIVER("cursor wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, 0)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, 1)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, 2)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, 3)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, 4)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, 5)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, 6)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_CURSOR, 7)));
+
+	DRM_DEBUG_DRIVER("Primary wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_PRIMARY, 0)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_PRIMARY, 1)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_PRIMARY, 2)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_PRIMARY, 3)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_PRIMARY, 4)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_PRIMARY, 5)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_PRIMARY, 6)),
+		 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_PRIMARY, 7)));	
+
+	DRM_DEBUG_DRIVER("Sprite0 wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE0, 0)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE0, 1)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE0, 2)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE0, 3)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE0, 4)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE0, 5)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE0, 6)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE0, 7)));	
+
+	DRM_DEBUG_DRIVER("Sprite1 wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 0)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 1)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 2)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 3)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 4)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 5)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 6)),
+	 vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 7)));		
+
+}
+
 int
 vgpu_compute_plane_wm_params(struct intel_vgpu *vgpu,
 			    struct intel_crtc_state *intel_cstate,
@@ -774,11 +893,14 @@ vgpu_compute_plane_wm_params(struct intel_vgpu *vgpu,
 		if (reg_val & PS_SCALER_EN &&
 		    (reg_val & PS_PLANE_SEL(plane) ||
 		    !(reg_val & PS_PLANE_SEL_MASK))) {
+
+			DRM_DEBUG_DRIVER("Pipe has enabled scaler: %d\n", scaler);
 			plane_scaler = scaler;
 			break;
 		}
 	}
 
+	plane_scaler = -1;
 
 	if (plane_scaler >= 0) {
 		//reg_val = vgpu->ps_conf[vgpu_pipe].win_size[scaler];
@@ -875,10 +997,8 @@ vgpu_compute_plane_wm_params(struct intel_vgpu *vgpu,
 
 	return 0;
 }
-
-
 void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
-		struct intel_crtc *intel_crtc, enum plane_id plane)
+		struct intel_crtc *intel_crtc, enum pipe pipe, enum plane_id plane)
 {
 	struct intel_gvt *gvt = vgpu->gvt;
 	struct drm_i915_private *dev_priv = gvt->dev_priv;
@@ -894,8 +1014,7 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 	struct skl_ddb_allocation *ddb_hw = &dev_priv->wm.skl_hw.ddb;
 
 	/* PIPE_A, PLANE_CURSOR */
-	enum pipe vgpu_pipe = PIPE_A;
-	enum pipe host_pipe = PIPE_A;
+
 	u16 ddb_blocks;
 	int level, max_level = ilk_wm_max_level(dev_priv);
 
@@ -905,7 +1024,9 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 		return;
 	}
 
-	vgpu_compute_plane_wm_params(vgpu, intel_cstate, intel_crtc->pipe, plane, &wm_params);
+	skl_debug_vgpu_watermark(vgpu, pipe);
+
+	vgpu_compute_plane_wm_params(vgpu, intel_cstate, pipe, plane, &wm_params);
 /*
 	wm = &vgpu->wm[vgpu_pipe].planes[plane];
 	ddb_blocks = skl_ddb_entry_size(&ddb_sw->plane[host_pipe][plane]);
