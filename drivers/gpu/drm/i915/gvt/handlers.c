@@ -3081,11 +3081,11 @@ static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 	vgpu->id, pipe, offset,
 	old_value, vgpu_vreg(vgpu, offset));
 
-	if (pipe == PIPE_A) {
+	if (pipe == PIPE_A) { // ToDO: need to remove the limitation of PIPE_A only
 
 		for_each_intel_crtc(drm_dev, intel_crtc) {
 			drm_modeset_lock(&intel_crtc->base.mutex, NULL);
-			if (PIPE_A == intel_crtc->pipe) {
+			if (pipe == intel_crtc->pipe) {
 				break;
 			}
 			drm_modeset_unlock(&intel_crtc->base.mutex);
