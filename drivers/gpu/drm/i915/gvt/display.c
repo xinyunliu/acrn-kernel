@@ -1070,16 +1070,19 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 		return;
 	}
 
+/*
 	DRM_DEBUG_DRIVER("[xy] ddb_sw: [%d, %d)\n", ddb_sw->plane[PIPE_A][PLANE_CURSOR].start,
 		ddb_sw->plane[PIPE_A][PLANE_CURSOR].end);
 	DRM_DEBUG_DRIVER("[xy] ddb_hw: [%d, %d)\n", ddb_hw->plane[PIPE_A][PLANE_CURSOR].start,
 		ddb_hw->plane[PIPE_A][PLANE_CURSOR].end);
+*/
+	DRM_DEBUG_DRIVER("[xy] pipe: %d plane: %d\n", pipe, plane);
 	skl_debug_vgpu_watermark(vgpu, pipe);
 
 	vgpu_compute_plane_wm_params(vgpu, intel_cstate, pipe, plane, &wm_params);
 
 
-	ddb_blocks = skl_ddb_entry_size(&ddb_sw->plane[pipe][plane]);
+	//ddb_blocks = skl_ddb_entry_size(&ddb_sw->plane[pipe][plane]);
 /*
 	for (level = 0; level <= max_level; level++) {
 		ret = vgpu_compute_plane_wm(vgpu,
