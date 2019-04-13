@@ -774,20 +774,20 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 
 	reg_val = I915_READ(PLANE_BUF_CFG(PIPE_A, 0));
 	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("1A  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
+	DRM_DEBUG_DRIVER("A1  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
 
 	reg_val = I915_READ(PLANE_BUF_CFG(PIPE_B, 0));
 	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("1B  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
+	DRM_DEBUG_DRIVER("A2  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
 
 	reg_val = I915_READ(CUR_BUF_CFG(PIPE_A));
 	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("CA  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
+	DRM_DEBUG_DRIVER("AC  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
 
 	reg_val = I915_READ(PLANE_WM_TRANS(PIPE_A, PLANE_CURSOR));
-	DRM_DEBUG_DRIVER("CA  hw wm trans:	0x%x  enabled:%c\n", reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
+	DRM_DEBUG_DRIVER("AC  hw wm trans:	0x%x  enabled:%c\n", reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
 
-	DRM_DEBUG_DRIVER("CA hw wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",
+	DRM_DEBUG_DRIVER("AC hw wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",
 	 I915_READ(PLANE_WM(pipe, PLANE_CURSOR, 0)),
 	 I915_READ(PLANE_WM(pipe, PLANE_CURSOR, 1)),
 	 I915_READ(PLANE_WM(pipe, PLANE_CURSOR, 2)),
@@ -800,12 +800,12 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 
 	reg_val = I915_READ(CUR_BUF_CFG(PIPE_B));
 	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("CA  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
+	DRM_DEBUG_DRIVER("BC  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
 
 	reg_val = I915_READ(PLANE_WM_TRANS(PIPE_B, PLANE_CURSOR));
-	DRM_DEBUG_DRIVER("CA  hw wm trans:	0x%x  enabled:%c\n", reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
+	DRM_DEBUG_DRIVER("BC  hw wm trans:	0x%x  enabled:%c\n", reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
 
-	DRM_DEBUG_DRIVER("CB hw wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",
+	DRM_DEBUG_DRIVER("BC hw wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",
 	 I915_READ(PLANE_WM(PIPE_B, PLANE_CURSOR, 0)),
 	 I915_READ(PLANE_WM(PIPE_B, PLANE_CURSOR, 1)),
 	 I915_READ(PLANE_WM(PIPE_B, PLANE_CURSOR, 2)),
