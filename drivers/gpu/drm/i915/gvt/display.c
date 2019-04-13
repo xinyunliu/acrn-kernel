@@ -1221,7 +1221,7 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 
 
 	if (plane == PLANE_CURSOR)
-		ddb_blocks = 8;
+		ddb_blocks = GVT_CURSOR_BLOCKS;
 	else  {// ToDo: record the ddb 
 		DRM_DEBUG_DRIVER("[xx] EEEEE: invalid ddb_blocks\n");
 		ddb_blocks = skl_ddb_entry_size(&ddb->plane[pipe][plane]);
