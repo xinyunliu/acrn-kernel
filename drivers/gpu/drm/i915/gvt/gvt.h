@@ -773,6 +773,8 @@ void intel_gvt_free_vreg(struct intel_vgpu *vgpu);
 bool is_force_nonpriv_mmio(unsigned int offset);
 void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 		struct intel_crtc *intel_crtc, enum pipe pipe, enum plane_id plane);
+u32 vgpu_calc_wm_level(const struct skl_wm_level *level);
+
 #include "trace.h"
 #include "mpt.h"
 

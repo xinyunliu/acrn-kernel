@@ -818,7 +818,23 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 }
 
 
+void skl_compute_transition_wm(struct intel_crtc_state *cstate,
+				      struct skl_wm_params *wp,
+				      struct skl_wm_level *wm_l0,
+				      uint16_t ddb_allocation,
+				      struct skl_wm_level *trans_wm /* out */);
 
+inline u32 vgpu_calc_wm_level(const struct skl_wm_level *level)
+{
+	u32 val = 0;
+
+	if (level->plane_en) {
+		val |= PLANE_WM_EN;
+		val |= level->plane_res_b;
+		val |= level->plane_res_l << PLANE_WM_LINES_SHIFT;
+	}
+	return val;
+}
 
 
 int
@@ -1162,23 +1178,7 @@ int vgpu_compute_plane_wm(struct intel_vgpu *vgpu,
 	return 0;
 }
 
-void skl_compute_transition_wm(struct intel_crtc_state *cstate,
-				      struct skl_wm_params *wp,
-				      struct skl_wm_level *wm_l0,
-				      uint16_t ddb_allocation,
-				      struct skl_wm_level *trans_wm /* out */);
 
-inline u32 vgpu_calc_wm_level(const struct skl_wm_level *level)
-{
-	u32 val = 0;
-
-	if (level->plane_en) {
-		val |= PLANE_WM_EN;
-		val |= level->plane_res_b;
-		val |= level->plane_res_l << PLANE_WM_LINES_SHIFT;
-	}
-	return val;
-}
 
 void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 		struct intel_crtc *intel_crtc, enum pipe pipe, enum plane_id plane)

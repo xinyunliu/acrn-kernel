@@ -3031,7 +3031,7 @@ static int skl_cursor_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[0] == vgpu->id)) {
 		; //bypass
-		//I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
+		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
 	if ( surf_base == 0 || surf_base != vgpu_vreg(vgpu, offset)) {
@@ -3074,6 +3074,9 @@ static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 	struct intel_crtc *intel_crtc = NULL;
 	struct intel_crtc_state *intel_cstate = NULL;
 	unsigned int pipe = SKL_PLANE_REG_TO_PIPE(offset);
+
+	struct skl_plane_wm cur_wm_old;
+
 	u32 old_value = vgpu_vreg(vgpu, offset);
 	write_vreg(vgpu, offset, p_data, bytes);
 
@@ -3101,11 +3104,23 @@ static int skl_ddb_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 
 	}
 
-	//intel_cstate = to_intel_crtc_state(intel_crtc->base.state);
-
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[PRIMARY_PLANE] == vgpu->id)) {
+
+		memcpy(&cur_wm_old, &vgpu->wm[pipe].planes[PLANE_CURSOR], sizeof(cur_wm_old));
 		intel_vgpu_update_plane_wm(vgpu, intel_crtc, pipe, PLANE_CURSOR);
+
+
+		if (memcmp(&cur_wm_old, &vgpu->wm[pipe].planes[PLANE_CURSOR], sizeof(cur_wm_old))) {
+			int level, max_level = ilk_wm_max_level(dev_priv);
+			for (level = 0; level <= max_level; level++) {
+				I915_WRITE_FW(CUR_WM(pipe, level),
+					vgpu_calc_wm_level(&vgpu->wm[pipe].planes[PLANE_CURSOR].wm[level]));
+				}
+				I915_WRITE_FW(CUR_WM_TRANS(pipe),
+					vgpu_calc_wm_level(&vgpu->wm[pipe].planes[PLANE_CURSOR].trans_wm));
+			}
+			I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 	}
 
 	drm_modeset_unlock(&intel_crtc->base.mutex);
