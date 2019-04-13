@@ -4899,7 +4899,7 @@ skl_compute_linetime_wm(struct intel_crtc_state *cstate)
 	return linetime_wm;
 }
 
-static void skl_compute_transition_wm(struct intel_crtc_state *cstate,
+void skl_compute_transition_wm(struct intel_crtc_state *cstate,
 				      struct skl_wm_params *wp,
 				      struct skl_wm_level *wm_l0,
 				      uint16_t ddb_allocation,

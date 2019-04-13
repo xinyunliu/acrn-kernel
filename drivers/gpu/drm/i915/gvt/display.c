@@ -817,6 +817,10 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 
 }
 
+
+
+
+
 int
 vgpu_compute_plane_wm_params(struct intel_vgpu *vgpu,
 			    struct intel_crtc_state *intel_cstate,
@@ -1043,6 +1047,139 @@ vgpu_compute_plane_wm_params(struct intel_vgpu *vgpu,
 
 	return 0;
 }
+
+
+int vgpu_compute_plane_wm(struct intel_vgpu *vgpu,
+			  struct intel_crtc_state *intel_cstate,
+			  enum plane_id plane,
+			  u16 ddb_allocation,
+			  int level,
+			  const struct skl_wm_params *wp,
+			  u16 *out_blocks, u8 *out_lines, bool *enabled)
+{
+	struct intel_gvt *gvt = vgpu->gvt;
+	struct drm_i915_private *dev_priv = gvt->dev_priv;
+	u32 latency = dev_priv->wm.skl_latency[level];
+	uint_fixed_16_16_t method1, method2;
+	uint_fixed_16_16_t selected_result;
+	u32 res_blocks, res_lines;
+	bool apply_memory_bw_wa = IS_GEN9_BC(dev_priv) || IS_BROXTON(dev_priv);
+	uint32_t min_disp_buf_needed;
+
+	if (latency == 0 ||
+	    !intel_cstate->base.active ||
+	    wp->width == 0)
+		return 0;
+
+	/* Display WA #1141: kbl,cfl */
+	if ((IS_KABYLAKE(dev_priv) || IS_COFFEELAKE(dev_priv) ||
+	    IS_CNL_REVID(dev_priv, CNL_REVID_A0, CNL_REVID_B0)) &&
+	    dev_priv->ipc_enabled)
+		latency += 4;
+
+	if (apply_memory_bw_wa && wp->x_tiled)
+		latency += 15;
+
+	method1 = skl_wm_method1(dev_priv, wp->plane_pixel_rate,
+				 wp->cpp, latency, wp->dbuf_block_size);
+	method2 = skl_wm_method2(wp->plane_pixel_rate,
+				 intel_cstate->base.adjusted_mode.crtc_htotal,
+				 latency,
+				 wp->plane_blocks_per_line);
+
+	if (wp->y_tiled) {
+		selected_result = max_fixed16(method2, wp->y_tile_minimum);
+	} else {
+		if ((wp->cpp * intel_cstate->base.adjusted_mode.crtc_htotal /
+		     wp->dbuf_block_size < 1) &&
+		     (wp->plane_bytes_per_line / wp->dbuf_block_size < 1))
+			selected_result = method2;
+		else if (ddb_allocation >=
+			 fixed16_to_u32_round_up(wp->plane_blocks_per_line))
+			selected_result = min_fixed16(method1, method2);
+		else if (latency >= wp->linetime_us)
+			selected_result = min_fixed16(method1, method2);
+		else
+			selected_result = method1;
+	}
+
+	res_blocks = fixed16_to_u32_round_up(selected_result) + 1;
+	res_lines = div_round_up_fixed16(selected_result,
+					 wp->plane_blocks_per_line);
+
+	/* Display WA #1125: skl,bxt,kbl,glk */
+	if (level == 0 && wp->rc_surface)
+		res_blocks += fixed16_to_u32_round_up(wp->y_tile_minimum);
+
+	/* Display WA #1126: skl,bxt,kbl,glk */
+	if (level >= 1 && level <= 7) {
+		if (wp->y_tiled) {
+			res_blocks += fixed16_to_u32_round_up(
+							wp->y_tile_minimum);
+			res_lines += wp->y_min_scanlines;
+		} else {
+			res_blocks++;
+		}
+	}
+
+	if (INTEL_GEN(dev_priv) >= 11) {
+		if (wp->y_tiled) {
+			uint32_t extra_lines;
+			uint_fixed_16_16_t fp_min_disp_buf_needed;
+
+			if (res_lines % wp->y_min_scanlines == 0)
+				extra_lines = wp->y_min_scanlines;
+			else
+				extra_lines = wp->y_min_scanlines * 2 -
+					      res_lines % wp->y_min_scanlines;
+
+			fp_min_disp_buf_needed = mul_u32_fixed16(res_lines +
+						extra_lines,
+						wp->plane_blocks_per_line);
+			min_disp_buf_needed = fixed16_to_u32_round_up(
+						fp_min_disp_buf_needed);
+		} else {
+			min_disp_buf_needed = DIV_ROUND_UP(res_blocks * 11, 10);
+		}
+	} else {
+		min_disp_buf_needed = res_blocks;
+	}
+
+	if ((level > 0 && res_lines > 31) ||
+	    res_blocks >= ddb_allocation ||
+	    min_disp_buf_needed >= ddb_allocation) {
+		DRM_DEBUG_DRIVER("Requested display configuration exceeds system watermark limitations\n");
+		DRM_DEBUG_DRIVER("[PLANE:%d:%c] blocks required = %u/%u, lines required = %u/31\n",
+			    plane, plane_name(plane),
+			    res_blocks, ddb_allocation, res_lines);
+	}
+
+	/* The number of lines are ignored for the level 0 watermark. */
+	*out_lines = level ? res_lines : 0;
+	*out_blocks = res_blocks;
+	*enabled = true;
+
+	return 0;
+}
+
+void skl_compute_transition_wm(struct intel_crtc_state *cstate,
+				      struct skl_wm_params *wp,
+				      struct skl_wm_level *wm_l0,
+				      uint16_t ddb_allocation,
+				      struct skl_wm_level *trans_wm /* out */);
+
+inline u32 vgpu_calc_wm_level(const struct skl_wm_level *level)
+{
+	u32 val = 0;
+
+	if (level->plane_en) {
+		val |= PLANE_WM_EN;
+		val |= level->plane_res_b;
+		val |= level->plane_res_l << PLANE_WM_LINES_SHIFT;
+	}
+	return val;
+}
+
 void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 		struct intel_crtc *intel_crtc, enum pipe pipe, enum plane_id plane)
 {
@@ -1057,7 +1194,7 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 
 
 	struct skl_ddb_allocation *ddb_sw = &intel_state->wm_results.ddb;
-	struct skl_ddb_allocation *ddb_hw = &dev_priv->wm.skl_hw.ddb;
+	struct skl_ddb_allocation *ddb = &dev_priv->wm.skl_hw.ddb;
 
 	/* PIPE_A, PLANE_CURSOR */
 
@@ -1079,36 +1216,18 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 	DRM_DEBUG_DRIVER("[xy] pipe: %d plane: %d\n", pipe, plane);
 	skl_debug_vgpu_watermark(vgpu, pipe);
 
+	memset(&wm_params, 0, sizeof(struct skl_wm_params));
 	vgpu_compute_plane_wm_params(vgpu, intel_cstate, pipe, plane, &wm_params);
 
 
-	//ddb_blocks = skl_ddb_entry_size(&ddb_sw->plane[pipe][plane]);
-/*
-	for (level = 0; level <= max_level; level++) {
-		ret = vgpu_compute_plane_wm(vgpu,
-					    intel_cstate,
-					    plane,
-					    ddb_blocks,
-					    level,
-					    &wm_params,
-					    &wm->wm[level].plane_res_b,
-					    &wm->wm[level].plane_res_l,
-					    &wm->wm[level].plane_en);
-		gvt_dbg_dpy("vgpu-%d: pipe(%d->%d), plane(%d), level(%d), wm(%x)\n",
-			    vgpu->id, vgpu_pipe, host_pipe, plane, level,
-			    vgpu_calc_wm_level(&wm->wm[level]));
-		if (ret)
-			break;
+	if (plane == PLANE_CURSOR)
+		ddb_blocks = 8;
+	else  {// ToDo: record the ddb 
+		DRM_DEBUG_DRIVER("[xx] EEEEE: invalid ddb_blocks\n");
+		ddb_blocks = skl_ddb_entry_size(&ddb->plane[pipe][plane]);
 	}
-*/
-
-/*
-	wm = &vgpu->wm[vgpu_pipe].planes[plane];
-	ddb_blocks = skl_ddb_entry_size(&ddb_sw->plane[host_pipe][plane]);
-	memset(&wm_params, 0, sizeof(struct skl_wm_params));
-	ret = vgpu_compute_plane_wm_params(vgpu, intel_cstate,
-						  plane, &wm_params);
-
+	
+	wm = &vgpu->wm[pipe].planes[plane];
 	for (level = 0; level <= max_level; level++) {
 		ret = vgpu_compute_plane_wm(vgpu,
 					    intel_cstate,
@@ -1119,18 +1238,17 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 					    &wm->wm[level].plane_res_b,
 					    &wm->wm[level].plane_res_l,
 					    &wm->wm[level].plane_en);
-		gvt_dbg_dpy("vgpu-%d: pipe(%d->%d), plane(%d), level(%d), wm(%x)\n",
-			    vgpu->id, vgpu_pipe, host_pipe, plane, level,
-			    vgpu_calc_wm_level(&wm->wm[level]));
+		DRM_DEBUG_DRIVER("vgpu-%d: pipe:(%d), plane(%d), level(%d), wm(%x)\n",
+			    vgpu->id, pipe, plane, level, vgpu_calc_wm_level(&wm->wm[level]));
 		if (ret)
 			break;
 	}
 
 	skl_compute_transition_wm(intel_cstate, &wm_params,
 		&wm->wm[0], ddb_blocks, &wm->trans_wm);
-	gvt_dbg_dpy("vgpu-%d: pipe(%d->%d), plane(%d), wm_trans(%x)\n",
-		    vgpu->id, vgpu_pipe, host_pipe, plane,
-		    vgpu_calc_wm_level(&wm->trans_wm));
-*/
+
+	DRM_DEBUG_DRIVER("vgpu-%d: pipe(%d), plane(%d), wm_trans(%x)\n",
+		vgpu->id, pipe, plane, vgpu_calc_wm_level(&wm->trans_wm));
+
 
 }
