@@ -311,6 +311,29 @@ static int init_service_thread(struct intel_gvt *gvt)
 
 void intel_gvt_init_pipe_info(struct intel_gvt *gvt);
 
+void skl_print_ddb(const char *s, struct skl_ddb_allocation *ddb)
+{
+	struct skl_ddb_entry *entry;
+	int pipe, plane;
+	DRM_DEBUG_DRIVER("%-15s%8s%8s%8s\n", s, "Start", "End", "Size");
+
+	for (pipe = 0; pipe <I915_MAX_PIPES; pipe++) {
+		DRM_DEBUG_DRIVER("Pipe %c\n", pipe_name(pipe));
+
+		for(plane= PLANE_PRIMARY; plane < I915_MAX_PLANES-1; plane++) {
+			entry = &ddb->plane[pipe][plane];
+
+			DRM_DEBUG_DRIVER("  Plane%-8d%8u%8u%8u\n", plane + 1,
+					entry->start, entry->end,
+					skl_ddb_entry_size(entry));
+		}
+
+		entry = &ddb->plane[pipe][PLANE_CURSOR];
+		DRM_DEBUG_DRIVER("  %-13s%8u%8u%8u\n", "Cursor", entry->start,
+				entry->end, skl_ddb_entry_size(entry));
+	}
+}
+
 /*
  * When enabling multi-plane in DomU, an issue is that the PLANE_BUF_CFG
  * register cannot be updated dynamically, since Dom0 has no idea of the
@@ -340,30 +363,32 @@ void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
 
 	memset(ddb, 0, sizeof(*ddb));
 	for_each_pipe_masked(dev_priv, pipe, active_crtcs) {
-		DRM_DEBUG_DRIVER("%-15s%8s%8s%8s\n", "", "Start", "End", "Size");
 		start = pipe_size * (i++);
 		end = start + pipe_size;
 		ddb->plane[pipe][PLANE_CURSOR].start = end - GVT_CURSOR_BLOCKS;
 		ddb->plane[pipe][PLANE_CURSOR].end = end;
 
 		plane_cnt = (INTEL_INFO(dev_priv)->num_sprites[pipe] + 1);
-		plane_size = (pipe_size - 8) / plane_cnt;
-		DRM_DEBUG_DRIVER("  %-13s%8u%8u%8u\n", "Cursor",
-						   ddb->plane[pipe][PLANE_CURSOR].start,
-						   ddb->plane[pipe][PLANE_CURSOR].end,
-						   skl_ddb_entry_size(&ddb->plane[pipe][PLANE_CURSOR]));
+		plane_size = (pipe_size - GVT_CURSOR_BLOCKS) / plane_cnt;
 
 		for_each_universal_plane(dev_priv, pipe, plane) {
 			ddb->plane[pipe][plane].start = start +
 				(plane * (pipe_size - GVT_CURSOR_BLOCKS) / plane_cnt);
 			ddb->plane[pipe][plane].end =
 				ddb->plane[pipe][plane].start + plane_size;
-			DRM_DEBUG_DRIVER("  Plane%-8d%8u%8u%8u\n", plane,
-						   ddb->plane[pipe][plane].start,
-						   ddb->plane[pipe][plane].end,
-						   skl_ddb_entry_size(&ddb->plane[pipe][plane]));
 		}
+
+		if (memcmp(&gvt->ddb, ddb, sizeof(*ddb)) != 0) {
+			DRM_DEBUG_DRIVER("pipe(%d): ddb changed\n", pipe);
+			skl_print_ddb("old ddb", &gvt->ddb);
+			memcpy(&gvt->ddb, ddb, sizeof(*ddb)); // use gvt->ddb to host the changed ddb
+		} else {
+			DRM_DEBUG_DRIVER("pipe(%d): ddb is not changed\n", pipe);
+
+		}
+		skl_print_ddb("new ddb", &gvt->ddb);
 	}
+
 }
 
 static int intel_gvt_init_vreg_pool(struct intel_gvt *gvt)
