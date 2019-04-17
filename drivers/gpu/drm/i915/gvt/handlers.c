@@ -1309,6 +1309,8 @@ static int send_display_ready_uevent(struct intel_vgpu *vgpu, int ready)
 	snprintf(vmid_str, 20, "VMID=%d", vgpu->id);
 	env[1] = vmid_str;
 
+	DRM_DEBUG_DRIVER("display ready\n");
+
 	return kobject_uevent_env(kobj, KOBJ_ADD, env);
 }
 
