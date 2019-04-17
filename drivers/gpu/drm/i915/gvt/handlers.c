@@ -3274,33 +3274,6 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_DH(SKL_PS_CTRL(PIPE_C, 0), D_SKL_PLUS, NULL, skl_ps_mmio_write);
 	MMIO_DH(SKL_PS_CTRL(PIPE_C, 1), D_SKL_PLUS, NULL, skl_ps_mmio_write);
 
-	MMIO_PLANES_DH(PLANE_CTL, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	MMIO_PLANES_DH(PLANE_STRIDE, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	MMIO_PLANES_DH(PLANE_POS, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	MMIO_PLANES_DH(PLANE_SIZE, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	MMIO_PLANES_DH(PLANE_KEYVAL, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	MMIO_PLANES_DH(PLANE_KEYMSK, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-
-	MMIO_PLANES_DH(PLANE_SURF, D_SKL_PLUS, NULL, skl_plane_surf_write);
-
-	MMIO_PLANES_DH(PLANE_KEYMAX, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	MMIO_PLANES_DH(PLANE_OFFSET, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	MMIO_PLANES_DH(PLANE_AUX_DIST, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	MMIO_PLANES_DH(PLANE_AUX_OFFSET, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-
-	if (0 && i915_modparams.avail_planes_per_pipe) {
-		MMIO_PLANES_SDH(PLANE_WM_BASE, 4 * 8, D_SKL_PLUS, NULL, NULL);
-		MMIO_PLANES_DH(PLANE_WM_TRANS, D_SKL_PLUS, NULL, NULL);
-	} else {
-		MMIO_PLANES_SDH(PLANE_WM_BASE, 4 * 8, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-		MMIO_PLANES_DH(PLANE_WM_TRANS, D_SKL_PLUS, NULL, skl_plane_mmio_write);
-	}
-
-	MMIO_PLANES_DH(PLANE_NV12_BUF_CFG, D_SKL_PLUS, NULL,
-		       pv_plane_wm_mmio_write);
-	MMIO_PLANES_DH(PLANE_BUF_CFG, D_SKL_PLUS, skl_ddb_mmio_read, NULL);
-
-
 	MMIO_DH(CURCNTR(PIPE_A), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
 	MMIO_DH(CURCNTR(PIPE_B), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
 	MMIO_DH(CURCNTR(PIPE_C), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
@@ -3333,6 +3306,33 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_DH(CUR_WM_TRANS(PIPE_A), D_SKL_PLUS, NULL, NULL);
 	MMIO_DH(CUR_WM_TRANS(PIPE_B), D_SKL_PLUS, NULL, NULL);
 	MMIO_DH(CUR_WM_TRANS(PIPE_C), D_SKL_PLUS, NULL, NULL);
+
+	MMIO_PLANES_DH(PLANE_CTL, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	MMIO_PLANES_DH(PLANE_STRIDE, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	MMIO_PLANES_DH(PLANE_POS, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	MMIO_PLANES_DH(PLANE_SIZE, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	MMIO_PLANES_DH(PLANE_KEYVAL, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	MMIO_PLANES_DH(PLANE_KEYMSK, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+
+	MMIO_PLANES_DH(PLANE_SURF, D_SKL_PLUS, NULL, skl_plane_surf_write);
+
+	MMIO_PLANES_DH(PLANE_KEYMAX, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	MMIO_PLANES_DH(PLANE_OFFSET, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	MMIO_PLANES_DH(PLANE_AUX_DIST, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	MMIO_PLANES_DH(PLANE_AUX_OFFSET, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+
+	if (i915_modparams.avail_planes_per_pipe) {
+		MMIO_PLANES_SDH(PLANE_WM_BASE, 4 * 8, D_SKL_PLUS, NULL, NULL);
+		MMIO_PLANES_DH(PLANE_WM_TRANS, D_SKL_PLUS, NULL, NULL);
+	} else {
+		MMIO_PLANES_SDH(PLANE_WM_BASE, 4 * 8, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+		MMIO_PLANES_DH(PLANE_WM_TRANS, D_SKL_PLUS, NULL, skl_plane_mmio_write);
+	}
+
+	MMIO_PLANES_DH(PLANE_NV12_BUF_CFG, D_SKL_PLUS, NULL,
+		       pv_plane_wm_mmio_write);
+	MMIO_PLANES_DH(PLANE_BUF_CFG, D_SKL_PLUS, skl_ddb_mmio_read, NULL);
+
 
 	MMIO_D(_MMIO(0x8f074), D_SKL_PLUS);
 	MMIO_D(_MMIO(0x8f004), D_SKL_PLUS);
