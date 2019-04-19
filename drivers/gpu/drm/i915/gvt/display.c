@@ -742,7 +742,7 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 
 	for (pipe_idx=PIPE_A; pipe_idx<=PIPE_B; pipe_idx++) {
 
-		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE1; plane_idx++) {
+		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE2; plane_idx++) {
 			reg_val = vgpu_vreg_t(vgpu, PLANE_BUF_CFG(pipe_idx, plane_idx));
 			skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
 			DRM_DEBUG_DRIVER("%c%d cached ddb: start: %d  end: %d\n", pipe_name(pipe_idx),
@@ -759,18 +759,22 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 
 		reg_val = vgpu_vreg_t(vgpu, CUR_WM_TRANS(pipe_idx));
 
-		DRM_DEBUG_DRIVER("%cC cached wm trans:	0x%8x  enabled:%c\n", pipe_name(pipe_idx),
+		DRM_DEBUG_DRIVER("%cC cached wm trans:	0x%08x  enabled:%c\n", pipe_name(pipe_idx),
 				reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
 
-		DRM_DEBUG_DRIVER("%cC cached wm: [0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x]\n", pipe_name(pipe_idx),
+		DRM_DEBUG_DRIVER(" %cC cached wm: [0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x]\n", pipe_name(pipe_idx),
 				vgpu_vreg_t(vgpu, CUR_WM(pipe_idx, 0)), vgpu_vreg_t(vgpu, CUR_WM(pipe_idx, 1)),
 				vgpu_vreg_t(vgpu, CUR_WM(pipe_idx, 2)), vgpu_vreg_t(vgpu, CUR_WM(pipe_idx, 3)),
 				vgpu_vreg_t(vgpu, CUR_WM(pipe_idx, 4)), vgpu_vreg_t(vgpu, CUR_WM(pipe_idx, 5)),
 				vgpu_vreg_t(vgpu, CUR_WM(pipe_idx, 6)), vgpu_vreg_t(vgpu, CUR_WM(pipe_idx, 7)));
 
-		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE1; plane_idx++) {
+		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE2; plane_idx++) {
 
-			reg_val = I915_READ(PLANE_WM_TRANS(pipe_idx, plane_idx));
+			reg_val = vgpu_vreg_t(vgpu, PLANE_WM_TRANS(pipe_idx, plane_idx));
+			DRM_DEBUG_DRIVER("%c%d cached wm trans:	0x%08x  enabled:%c\n",
+					pipe_name(pipe_idx), plane_idx,
+					reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
+
 
 			DRM_DEBUG_DRIVER("%c%d cached wm: [0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x]\n",
 					pipe_name(pipe_idx), plane_idx,
@@ -790,7 +794,7 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 
 	for (pipe_idx=PIPE_A; pipe_idx<=PIPE_B; pipe_idx++) {
 
-		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE1; plane_idx++) {
+		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE2; plane_idx++) {
 			reg_val = I915_READ(PLANE_BUF_CFG(pipe_idx, plane_idx));
 			skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
 			DRM_DEBUG_DRIVER("%c%d hw ddb: start: %d  end: %d\n", pipe_name(pipe_idx),
@@ -807,18 +811,22 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 
 		reg_val = I915_READ(CUR_WM_TRANS(pipe_idx));
 
-		DRM_DEBUG_DRIVER("%cC hw wm trans:	0x%8x  enabled:%c\n", pipe_name(pipe_idx),
+		DRM_DEBUG_DRIVER("%cC hw wm trans:	0x%08x  enabled:%c\n", pipe_name(pipe_idx),
 				reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
 
 		DRM_DEBUG_DRIVER("%cC hw wm: [0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x]\n", pipe_name(pipe_idx),
-				I915_READ(CUR_WM(pipe, 0)), I915_READ(CUR_WM(pipe, 1)),
-				I915_READ(CUR_WM(pipe, 2)), I915_READ(CUR_WM(pipe, 3)),
-				I915_READ(CUR_WM(pipe, 4)), I915_READ(CUR_WM(pipe, 5)),
-				I915_READ(CUR_WM(pipe, 6)), I915_READ(CUR_WM(pipe, 7)));
+				I915_READ(CUR_WM(pipe_idx, 0)), I915_READ(CUR_WM(pipe_idx, 1)),
+				I915_READ(CUR_WM(pipe_idx, 2)), I915_READ(CUR_WM(pipe_idx, 3)),
+				I915_READ(CUR_WM(pipe_idx, 4)), I915_READ(CUR_WM(pipe_idx, 5)),
+				I915_READ(CUR_WM(pipe_idx, 6)), I915_READ(CUR_WM(pipe_idx, 7)));
 
-		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE1; plane_idx++) {
+		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE2; plane_idx++) {
 
 			reg_val = I915_READ(PLANE_WM_TRANS(pipe_idx, plane_idx));
+			DRM_DEBUG_DRIVER("%c%d hw wm trans: 0x%08x  enabled:%c\n",
+						pipe_name(pipe_idx), plane_idx,
+						reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
+
 
 			DRM_DEBUG_DRIVER("%c%d hw wm: [0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x]\n",
 					pipe_name(pipe_idx), plane_idx,
