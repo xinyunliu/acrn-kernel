@@ -256,6 +256,8 @@ struct intel_vgpu {
 	struct skl_pipe_wm wm[I915_MAX_PIPES];
 	/* display switch lock */
 	struct mutex disp_lock;
+	/* record vgpu ddb topology */
+	struct skl_ddb_allocation ddb;
 
 	/* end of IDV */
 };
