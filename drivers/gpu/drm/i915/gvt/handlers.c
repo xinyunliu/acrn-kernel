@@ -2955,10 +2955,45 @@ static int skl_plane_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 		void *p_data, unsigned int bytes)
 {
 	struct drm_i915_private *dev_priv = vgpu->gvt->dev_priv;
+	struct drm_device *drm_dev = &dev_priv->drm;
+	struct intel_crtc *intel_crtc = NULL;
+	struct intel_crtc_state *intel_cstate = NULL;
 	unsigned int pipe = SKL_PLANE_REG_TO_PIPE(offset);
 	unsigned int plane = SKL_PLANE_REG_TO_PLANE(offset);
 
+	u32 old_value = vgpu_vreg(vgpu, offset);
+
 	write_vreg(vgpu, offset, p_data, bytes);
+
+
+	DRM_DEBUG_DRIVER("plane mmio write for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
+	vgpu->id, pipe, offset,
+	old_value, vgpu_vreg(vgpu, offset));
+
+	if (old_value == vgpu_vreg(vgpu, offset)) {
+	     return 0;
+	}
+
+
+	if (pipe == PIPE_A) { // ToDO: need to remove the limitation of PIPE_A only
+
+		for_each_intel_crtc(drm_dev, intel_crtc) {
+			drm_modeset_lock(&intel_crtc->base.mutex, NULL);
+			if (pipe == intel_crtc->pipe) {
+				break;
+			}
+			drm_modeset_unlock(&intel_crtc->base.mutex);
+		}
+		if (!intel_crtc) {
+			DRM_DEBUG_DRIVER("Not Found intel_crtc for plane mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
+				    vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
+			return 0;
+		} else {
+				DRM_DEBUG_DRIVER("Found intel_crtc for plane mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
+				    vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
+		}
+
+	}
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[plane] == vgpu->id)) {
 
@@ -2976,11 +3011,16 @@ static int skl_plane_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 
 			memcpy(&plane_ps_old, &vgpu->ps_conf[pipe], sizeof(plane_ps_old));
 			memcpy(&plane_wm_old, &vgpu->wm[pipe], sizeof(plane_wm_old));
+
+			intel_vgpu_update_plane_wm(vgpu, intel_crtc, pipe, plane);
 		}
 		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 
 		mutex_unlock(&vgpu->disp_lock);
 	}
+
+	drm_modeset_unlock(&intel_crtc->base.mutex);
+
 	return 0;
 }
 
