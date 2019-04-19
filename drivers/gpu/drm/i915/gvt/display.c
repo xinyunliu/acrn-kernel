@@ -1234,14 +1234,13 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 /*
 	DRM_DEBUG_DRIVER("[xy] ddb_sw: [%d, %d)\n", ddb_sw->plane[PIPE_A][PLANE_CURSOR].start,
 		ddb_sw->plane[PIPE_A][PLANE_CURSOR].end);
-	DRM_DEBUG_DRIVER("[xy] ddb_hw: [%d, %d)\n", ddb_hw->plane[PIPE_A][PLANE_CURSOR].start,
-		ddb_hw->plane[PIPE_A][PLANE_CURSOR].end);
 */
-	DRM_DEBUG_DRIVER("[xy] pipe: %d plane: %d\n", pipe, plane);
 
-	gvt_print_ddb_info("dev_priv->wm.skl_hw.ddb:\n", ddb);
-
-	skl_debug_vgpu_watermark(vgpu, pipe);
+	if (plane == PLANE_CURSOR) {
+		DRM_DEBUG_DRIVER("[xy] pipe: %d plane: %d\n", pipe, plane);
+		gvt_print_ddb_info("dev_priv->wm.skl_hw.ddb:\n", ddb);
+		skl_debug_vgpu_watermark(vgpu, pipe);
+	}
 
 	memset(&wm_params, 0, sizeof(struct skl_wm_params));
 	vgpu_compute_plane_wm_params(vgpu, intel_cstate, pipe, plane, &wm_params);
