@@ -4201,6 +4201,8 @@ skl_plane_relative_data_rate(const struct intel_crtc_state *cstate,
 
 	down_scale_amount = skl_plane_downscale_amount(cstate, intel_pstate);
 
+	DRM_DEBUG_DRIVER("Plane:%d w:%d h:%d bpp:%d date_rate:%d scale:%d\n",
+			plane, width, height, fb->format->cpp[plane], data_rate, fixed16_to_u32(down_scale_amount));
 	return mul_round_up_u32_fixed16(data_rate, down_scale_amount);
 }
 
