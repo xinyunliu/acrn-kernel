@@ -833,10 +833,12 @@ static int handle_pcie_cfg(struct vhm_vm *vm, struct vhm_request *req, int vcpu)
 {
 	uint64_t addr = req->reqs.mmio_request.address;
 
-	if ( req->type != REQ_MMIO || addr < PCI_EMUL_ECFG_BASE ||
+	if (req->type != REQ_MMIO || addr < PCI_EMUL_ECFG_BASE ||
 		addr + req->reqs.mmio_request.size >= PCI_EMUL_ECFG_BOARDER) {
 		return -1;
 	}
+
+	addr -= PCI_EMUL_ECFG_BASE;
 
 	req->type = REQ_PCICFG;
 	req->reqs.pci_request.bus = (addr >> 20) & 0xFF;
