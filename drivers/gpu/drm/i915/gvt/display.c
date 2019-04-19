@@ -327,6 +327,8 @@ static int setup_virtual_monitor(struct intel_vgpu *vgpu, int port_num,
 	int valid_extensions = 1;
 	struct edid *tmp_edid = NULL;
 
+
+	DRM_DEBUG_DRIVER("port: %d type: %d, dp: %c\n", port_num, type, is_dp?'Y':'N');
 	if (WARN_ON(resolution >= GVT_EDID_NUM))
 		return -EINVAL;
 
@@ -552,8 +554,11 @@ int setup_virtual_monitors(struct intel_vgpu *vgpu)
 				&& connector->detect_edid) {
 			/* if no planes are allocated for this pipe, skip it */
 			if (i915_modparams.avail_planes_per_pipe &&
-			    !bxt_check_planes(vgpu, pipe))
+			    !bxt_check_planes(vgpu, pipe)) {
+				DRM_DEBUG_DRIVER("no plane on pipe(%d) of vgpu(%d)\n",
+						pipe, vgpu->id);
 				continue;
+			}
 			/* Get (Dom0) port associated with current pipe. */
 			port = connector->encoder->port;
 			ret = setup_virtual_monitor(vgpu, port,
@@ -618,6 +623,7 @@ int intel_vgpu_init_display(struct intel_vgpu *vgpu, u64 resolution)
 
 	mutex_init(&vgpu->disp_lock);
 
+	DRM_DEBUG_KMS("set up moitors\n");
 	if (IS_BROXTON(dev_priv) || IS_KABYLAKE(dev_priv))
 		return setup_virtual_monitors(vgpu);
 	else if (IS_SKYLAKE(dev_priv))
