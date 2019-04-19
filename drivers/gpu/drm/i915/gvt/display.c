@@ -652,6 +652,31 @@ skl_wm_method2(uint32_t pixel_rate,
 uint_fixed_16_16_t intel_get_linetime_us(struct intel_crtc_state *cstate);
 
 
+static void gvt_print_ddb_info(char *str, struct skl_ddb_allocation *ddb)
+{
+	struct skl_ddb_entry *entry;
+	enum pipe pipe;
+	enum plane_id plane;
+	DRM_DEBUG_DRIVER("%s\n", str);
+	DRM_DEBUG_DRIVER("%-15s%8s%8s%8s\n", "", "Start", "End", "Size");
+
+	for(pipe = PIPE_A; pipe < PIPE_C; pipe++) {
+		DRM_DEBUG_DRIVER("Pipe %c\n", pipe_name(pipe));
+
+		for(plane = PLANE_A; plane <= PLANE_C; plane++) {
+			entry = &ddb->plane[pipe][plane];
+			DRM_DEBUG_DRIVER("  Plane%-8d%8u%8u%8u\n", plane + 1,
+					entry->start, entry->end,
+					skl_ddb_entry_size(entry));
+		}
+
+		entry = &ddb->plane[pipe][PLANE_CURSOR];
+		DRM_DEBUG_DRIVER("  %-13s%8u%8u%8u\n", "Cursor", entry->start,
+				entry->end, skl_ddb_entry_size(entry));
+	}
+}
+
+
 void skl_dump_cursor_ddb(struct drm_i915_private *dev_priv,
 		struct skl_ddb_entry *entry, u32 reg)
 {
@@ -1187,8 +1212,6 @@ int vgpu_compute_plane_wm(struct intel_vgpu *vgpu,
 	return 0;
 }
 
-
-
 void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 		struct intel_crtc *intel_crtc, enum pipe pipe, enum plane_id plane)
 {
@@ -1202,7 +1225,6 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 	struct skl_wm_params wm_params;
 
 
-	struct skl_ddb_allocation *ddb_sw = &intel_state->wm_results.ddb;
 	struct skl_ddb_allocation *ddb = &dev_priv->wm.skl_hw.ddb;
 
 	/* PIPE_A, PLANE_CURSOR */
@@ -1223,6 +1245,9 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 		ddb_hw->plane[PIPE_A][PLANE_CURSOR].end);
 */
 	DRM_DEBUG_DRIVER("[xy] pipe: %d plane: %d\n", pipe, plane);
+
+	gvt_print_ddb_info("dev_priv->wm.skl_hw.ddb:\n", ddb);
+
 	skl_debug_vgpu_watermark(vgpu, pipe);
 
 	memset(&wm_params, 0, sizeof(struct skl_wm_params));
