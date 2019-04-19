@@ -173,6 +173,12 @@ struct intel_vgpu_submission {
 	bool active;
 };
 
+struct skl_pipe_ps_config {
+	u32 win_pos[2];
+	u32 win_size[2];
+	u32 ctrl[2];
+};
+
 struct intel_vgpu {
 	struct intel_gvt *gvt;
 	struct mutex vgpu_lock;
@@ -242,8 +248,16 @@ struct intel_vgpu {
 	bool ge_cache_enable;
 	bool entire_nonctxmmio_checked;
 
+	/* port from IDV */
+
+	/* overridden scaler settings for vgpu->disp_pipe */
+	struct skl_pipe_ps_config ps_conf[I915_MAX_PIPES];
 	/* watermark for vgpu, 1 vgpu has n pipes */
 	struct skl_pipe_wm wm[I915_MAX_PIPES];
+	/* display switch lock */
+	struct mutex disp_lock;
+
+	/* end of IDV */
 };
 
 /* validating GM healthy status*/

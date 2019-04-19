@@ -616,6 +616,8 @@ int intel_vgpu_init_display(struct intel_vgpu *vgpu, u64 resolution)
 
 	intel_vgpu_init_i2c_edid(vgpu);
 
+	mutex_init(&vgpu->disp_lock);
+
 	if (IS_BROXTON(dev_priv) || IS_KABYLAKE(dev_priv))
 		return setup_virtual_monitors(vgpu);
 	else if (IS_SKYLAKE(dev_priv))
