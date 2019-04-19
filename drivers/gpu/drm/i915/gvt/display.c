@@ -663,7 +663,7 @@ static void gvt_print_ddb_info(char *str, struct skl_ddb_allocation *ddb)
 	for(pipe = PIPE_A; pipe < PIPE_C; pipe++) {
 		DRM_DEBUG_DRIVER("Pipe %c\n", pipe_name(pipe));
 
-		for(plane = PLANE_A; plane <= PLANE_C; plane++) {
+		for(plane = PLANE_PRIMARY; plane <= PLANE_SPRITE1; plane++) {
 			entry = &ddb->plane[pipe][plane];
 			DRM_DEBUG_DRIVER("  Plane%-8d%8u%8u%8u\n", plane + 1,
 					entry->start, entry->end,
@@ -753,7 +753,7 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 	reg_val = vgpu_vreg_t(vgpu, CUR_WM_TRANS(pipe));
 	skl_dump_cursor_wm(reg_val, &wm_vals[8]);
 
-	DRM_DEBUG_DRIVER("dump watermark: pipe:%d plane:%d\n", pipe, PLANE_CURSOR);
+	DRM_DEBUG_DRIVER("dump vgpu cached watermark: pipe:%d plane:%d\n", pipe, PLANE_CURSOR);
 	DRM_DEBUG_DRIVER("cursor ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
 	DRM_DEBUG_DRIVER("cursor wm trans:  0x%8x  enabled:%c\n", vgpu_vreg_t(vgpu, CUR_WM_TRANS(pipe)),
 						wm_vals[8].plane_en?'Y':'N');
@@ -799,55 +799,48 @@ void skl_debug_vgpu_watermark(struct intel_vgpu *vgpu, enum pipe pipe)
 		vgpu_vreg_t(vgpu, PLANE_WM(pipe, PLANE_SPRITE1, 7)));
 
 
-	DRM_DEBUG_DRIVER("Pipe A hw ddbs:\n");
-
-	reg_val = I915_READ(PLANE_BUF_CFG(PIPE_A, 0));
-	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("A0  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
-
-	reg_val = I915_READ(PLANE_BUF_CFG(PIPE_A, 1));
-	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("A1  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
-
-	reg_val = I915_READ(PLANE_BUF_CFG(PIPE_A, 2));
-	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("A2  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
-
-	reg_val = I915_READ(CUR_BUF_CFG(PIPE_A));
-	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("AC  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
-
-
-	DRM_DEBUG_DRIVER("Pipe B hw ddbs:\n");
-
-	reg_val = I915_READ(PLANE_BUF_CFG(PIPE_B, 0));
-	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("B0  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
-
-	reg_val = I915_READ(PLANE_BUF_CFG(PIPE_B, 1));
-	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("B1  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
-
-	reg_val = I915_READ(PLANE_BUF_CFG(PIPE_B, 2));
-	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("B2  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
-
-	reg_val = I915_READ(CUR_BUF_CFG(PIPE_B));
-	skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
-	DRM_DEBUG_DRIVER("BC  hw ddb: start: %d  end: %d\n", ddb_c1.start, ddb_c1.end);
-
+	DRM_DEBUG_DRIVER("dump sos H/W watermark registers:\n");
 
 	for (pipe_idx=PIPE_A; pipe_idx<=PIPE_B; pipe_idx++) {
+
+		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE1; plane_idx++) {
+			reg_val = I915_READ(PLANE_BUF_CFG(PIPE_A, 0));
+			skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
+			DRM_DEBUG_DRIVER("%c%d  hw ddb: start: %d  end: %d\n", pipe_name(pipe_idx),
+					plane_idx,ddb_c1.start, ddb_c1.end);
+		}
+
+		reg_val = I915_READ(CUR_BUF_CFG(pipe_idx));
+		skl_dump_cursor_ddb(dev_priv, &ddb_c1, reg_val);
+		DRM_DEBUG_DRIVER("%cC  hw ddb: start: %d  end: %d\n", pipe_name(pipe_idx),
+				ddb_c1.start, ddb_c1.end);
+	}
+
+	for (pipe_idx=PIPE_A; pipe_idx<=PIPE_B; pipe_idx++) {
+
 		reg_val = I915_READ(CUR_WM_TRANS(pipe_idx));
 
-		DRM_DEBUG_DRIVER("%cC  hw wm trans:	0x%x  enabled:%c\n", 'A'+(pipe_idx-PIPE_A),
-			reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
-		DRM_DEBUG_DRIVER("%cC hw wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n", 'A'+(pipe_idx-PIPE_A),
-			I915_READ(CUR_WM(pipe, 0)), I915_READ(CUR_WM(pipe, 1)),
-			I915_READ(CUR_WM(pipe, 2)), I915_READ(CUR_WM(pipe, 3)),
-			I915_READ(CUR_WM(pipe, 4)), I915_READ(CUR_WM(pipe, 5)),
-			I915_READ(CUR_WM(pipe, 6)), I915_READ(CUR_WM(pipe, 7)));
+		DRM_DEBUG_DRIVER("%cC  hw wm trans:	0x%x  enabled:%c\n", pipe_name(pipe_idx),
+				reg_val, reg_val&PLANE_WM_EN ?'Y':'N');
+		DRM_DEBUG_DRIVER("%cC hw wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n", pipe_name(pipe_idx),
+				I915_READ(CUR_WM(pipe, 0)), I915_READ(CUR_WM(pipe, 1)),
+				I915_READ(CUR_WM(pipe, 2)), I915_READ(CUR_WM(pipe, 3)),
+				I915_READ(CUR_WM(pipe, 4)), I915_READ(CUR_WM(pipe, 5)),
+				I915_READ(CUR_WM(pipe, 6)), I915_READ(CUR_WM(pipe, 7)));
 
+		for(plane_idx=PLANE_PRIMARY; plane_idx < PLANE_SPRITE1; plane_idx++) {
+
+			DRM_DEBUG_DRIVER("%c%d wm: [0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x]\n",pipe_name(pipe_idx),
+					plane_idx,
+					I915_READ(PLANE_WM(pipe_idx, plane_idx, 0)),
+					I915_READ(PLANE_WM(pipe_idx, plane_idx, 1)),
+					I915_READ(PLANE_WM(pipe_idx, plane_idx, 2)),
+					I915_READ(PLANE_WM(pipe_idx, plane_idx, 3)),
+					I915_READ(PLANE_WM(pipe_idx, plane_idx, 4)),
+					I915_READ(PLANE_WM(pipe_idx, plane_idx, 5)),
+					I915_READ(PLANE_WM(pipe_idx, plane_idx, 6)),
+					I915_READ(PLANE_WM(pipe_idx, plane_idx, 7)));
+		}
 	}
 }
 
