@@ -2988,11 +2988,7 @@ static int skl_plane_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 			DRM_DEBUG_DRIVER("Not Found intel_crtc for plane mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
 					vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
 			return 0;
-		} else {
-			DRM_DEBUG_DRIVER("Found intel_crtc for plane mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
-					vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
 		}
-
 	}
 
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
