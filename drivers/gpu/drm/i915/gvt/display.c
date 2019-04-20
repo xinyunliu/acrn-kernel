@@ -1252,6 +1252,8 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 	vgpu_compute_plane_wm_params(vgpu, intel_cstate, pipe, plane, &wm_params);
 
 
+	ddb_blocks = skl_ddb_entry_size(&ddb->plane[pipe][plane]);
+
 	if (plane == PLANE_CURSOR)
 		ddb_blocks = GVT_CURSOR_BLOCKS;
 	else  {// ToDo: record the ddb

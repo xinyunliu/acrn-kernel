@@ -5614,10 +5614,17 @@ static void skl_atomic_update_crtc_wm(struct intel_atomic_state *state,
 
 	if (i915_modparams.avail_planes_per_pipe) {
 		for_each_universal_plane(dev_priv, pipe, plane_id) {
+			DRM_DEBUG_DRIVER("[xyl] skl_atomic_update_crtc_wm(): pipe(%d) plane(%d)\n", pipe, plane_id);
 			skl_write_plane_wm(crtc, &pipe_wm->planes[plane_id],
 					ddb, plane_id);
 		}
-
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+		DRM_DEBUG_DRIVER("[xyl] skl_atomic_update_crtc_wm(): pipe(%d) plane(%d) ddb(%d,%d)\n", pipe, plane_id,
+				dev_priv->gvt->ddb.plane[pipe][PLANE_CURSOR].start,
+				dev_priv->gvt->ddb.plane[pipe][PLANE_CURSOR].end);
+		skl_ddb_entry_write(dev_priv, CUR_BUF_CFG(pipe),
+				&dev_priv->gvt->ddb.plane[pipe][PLANE_CURSOR]);
+#endif
 		return;
 	}
 

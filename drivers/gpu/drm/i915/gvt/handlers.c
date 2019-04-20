@@ -2965,15 +2965,15 @@ static int skl_plane_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 
 	write_vreg(vgpu, offset, p_data, bytes);
 
-
-	DRM_DEBUG_DRIVER("plane mmio write for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
-	vgpu->id, pipe, offset,
-	old_value, vgpu_vreg(vgpu, offset));
-
 	if (old_value == vgpu_vreg(vgpu, offset)) {
 	     return 0;
 	}
 
+	if (offset != PLANE_CTL(pipe, plane).reg) {
+		DRM_DEBUG_DRIVER("plane mmio write for vgpu:%d, pipe:%d, plane:%d offset:0x%x, offset-d:0x%x val:0x%x->0x%x\n",
+				vgpu->id, pipe, plane, offset, PLANE_CTL(pipe, plane).reg,
+				old_value, vgpu_vreg(vgpu, offset));
+	}
 
 	if (pipe == PIPE_A) { // ToDO: need to remove the limitation of PIPE_A only
 
@@ -2986,14 +2986,15 @@ static int skl_plane_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 		}
 		if (!intel_crtc) {
 			DRM_DEBUG_DRIVER("Not Found intel_crtc for plane mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
-				    vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
+					vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
 			return 0;
 		} else {
-				DRM_DEBUG_DRIVER("Found intel_crtc for plane mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
-				    vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
+			DRM_DEBUG_DRIVER("Found intel_crtc for plane mmio update for vgpu:%d, pipe:%d, offset:0x%x, val:0x%x->0x%x\n",
+					vgpu->id, pipe, offset, old_value, vgpu_vreg(vgpu, offset));
 		}
 
 	}
+
 	if ((vgpu_vreg_t(vgpu, PIPECONF(pipe)) & I965_PIPECONF_ACTIVE) &&
 			(vgpu->gvt->pipe_info[pipe].plane_owner[plane] == vgpu->id)) {
 
@@ -3003,16 +3004,18 @@ static int skl_plane_mmio_write(struct intel_vgpu *vgpu, unsigned int offset,
 			(vgpu_vreg(vgpu, offset) & PLANE_CTL_ENABLE)) {
 			// dump the watermark, etc
 
-			int level, max_level = ilk_wm_max_level(dev_priv);
-			struct skl_pipe_ps_config plane_ps_old;
-			struct skl_pipe_wm plane_wm_old;
-			DRM_DEBUG_DRIVER("vgpu-%d: update scaler on plane-%d PLANE_CTL_ENABLE\n",
-				    vgpu->id, plane);
+			if ((vgpu_vreg(vgpu, offset) ^ old_value) & ~0x8 != 0)  {
+				int level, max_level = ilk_wm_max_level(dev_priv);
+				struct skl_pipe_ps_config plane_ps_old;
+				struct skl_pipe_wm plane_wm_old;
+				DRM_DEBUG_DRIVER("vgpu-%d: update scaler on plane-%d PLANE_CTL_ENABLE\n",
+						vgpu->id, plane);
 
-			memcpy(&plane_ps_old, &vgpu->ps_conf[pipe], sizeof(plane_ps_old));
-			memcpy(&plane_wm_old, &vgpu->wm[pipe], sizeof(plane_wm_old));
+				memcpy(&plane_ps_old, &vgpu->ps_conf[pipe], sizeof(plane_ps_old));
+				memcpy(&plane_wm_old, &vgpu->wm[pipe], sizeof(plane_wm_old));
 
-			intel_vgpu_update_plane_wm(vgpu, intel_crtc, pipe, plane);
+				intel_vgpu_update_plane_wm(vgpu, intel_crtc, pipe, plane);
+			}
 		}
 		I915_WRITE(_MMIO(offset), vgpu_vreg(vgpu, offset));
 

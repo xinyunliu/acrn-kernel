@@ -14134,6 +14134,7 @@ static int intel_crtc_init_restrict_planes(struct drm_i915_private *dev_priv,
 	struct intel_crtc *intel_crtc;
 	struct intel_crtc_state *crtc_state;
 	struct intel_plane *primary = NULL, *intel_plane = NULL;
+	//struct intel_plane *cursor = NULL;
 	bool is_primary = true;
 	int plane, ret, crtc_plane;
 
@@ -14167,7 +14168,15 @@ static int intel_crtc_init_restrict_planes(struct drm_i915_private *dev_priv,
 			intel_crtc->plane_ids_mask |= BIT(intel_plane->id);
 		}
 	}
+/*
+	cursor = intel_cursor_plane_create(dev_priv, pipe);
+	if (IS_ERR(cursor)) {
+		ret = PTR_ERR(cursor);
+		goto fail;
+	}
 
+	intel_crtc->plane_ids_mask |= BIT(cursor->id);
+*/
 	ret = drm_crtc_init_with_planes(&dev_priv->drm,
 			&intel_crtc->base,
 			primary ? &primary->base : NULL, NULL,
