@@ -1087,10 +1087,10 @@ vgpu_compute_plane_wm_params(struct intel_vgpu *vgpu,
 	wp->linetime_us = fixed16_to_u32_round_up(
 					intel_get_linetime_us(intel_cstate));
 
-	DRM_DEBUG_DRIVER("vgpu-%d: pipe(%d), plane(%d), x_tiled(%d), y_tiled(%d), rc_surface(%d), width(%x), cpp(%x), "
+	DRM_DEBUG_DRIVER("vgpu-%d: pipe(%d), plane(%d), x_tiled(%d), y_tiled(%d), rc_surface(%d), is_planar(%d), width(%x), cpp(%x), "
 		    "plane_pixel_rate(%d), y_min_scanlines(%x), plane_bytes_per_line(%x), plane_blocks_per_line(%x), "
 		    "y_tile_minimum(%x), linetime_us(%x), dbuf_block_size(%x)\n",
-		    vgpu->id, pipe, plane, wp->x_tiled, wp->y_tiled, wp->rc_surface, wp->width, wp->cpp,
+		    vgpu->id, pipe, plane, wp->x_tiled, wp->y_tiled, wp->rc_surface, wp->is_planar, wp->width, wp->cpp,
 		    wp->plane_pixel_rate, wp->y_min_scanlines, wp->plane_bytes_per_line, wp->plane_blocks_per_line.val,
 		    wp->y_tile_minimum.val, wp->linetime_us, wp->dbuf_block_size);
 
@@ -1272,8 +1272,12 @@ void intel_vgpu_update_plane_wm(struct intel_vgpu *vgpu,
 					    &wm->wm[level].plane_res_b,
 					    &wm->wm[level].plane_res_l,
 					    &wm->wm[level].plane_en);
-		DRM_DEBUG_DRIVER("vgpu-%d: pipe:(%d), plane(%d), level(%d), wm(%x)\n",
-			    vgpu->id, pipe, plane, level, vgpu_calc_wm_level(&wm->wm[level]));
+		if (plane == PLANE_CURSOR)
+		DRM_DEBUG_DRIVER("vgpu-%d: pipe:(%d), plane(%d), level(%d), wm(%x), wm_cache(%x)\n",
+			    vgpu->id, pipe, plane, level, vgpu_calc_wm_level(&wm->wm[level]), vgpu_vreg_t(vgpu, CUR_WM(pipe,level)));
+		else
+		DRM_DEBUG_DRIVER("vgpu-%d: pipe:(%d), plane(%d), level(%d), wm(%x), wm_cache(%x)\n",
+			    vgpu->id, pipe, plane, level, vgpu_calc_wm_level(&wm->wm[level]), vgpu_vreg_t(vgpu,PLANE_WM(pipe,plane,level)));	
 		if (ret)
 			break;
 	}

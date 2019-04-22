@@ -3337,10 +3337,15 @@ static int init_skl_mmio_info(struct intel_gvt *gvt)
 	MMIO_DH(SKL_PS_CTRL(PIPE_C, 0), D_SKL_PLUS, NULL, skl_ps_mmio_write);
 	MMIO_DH(SKL_PS_CTRL(PIPE_C, 1), D_SKL_PLUS, NULL, skl_ps_mmio_write);
 
+if (1) {
 	MMIO_DH(CURCNTR(PIPE_A), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
 	MMIO_DH(CURCNTR(PIPE_B), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
 	MMIO_DH(CURCNTR(PIPE_C), D_SKL_PLUS, NULL, skl_ddb_mmio_write);
-
+} else {
+	MMIO_DH(CURCNTR(PIPE_A), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
+	MMIO_DH(CURCNTR(PIPE_B), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
+	MMIO_DH(CURCNTR(PIPE_C), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
+}
 	MMIO_DH(CURPOS(PIPE_A), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
 	MMIO_DH(CURPOS(PIPE_B), D_SKL_PLUS, NULL, skl_cursor_mmio_write);
 	MMIO_DH(CURPOS(PIPE_C), D_SKL_PLUS, NULL, skl_cursor_mmio_write);

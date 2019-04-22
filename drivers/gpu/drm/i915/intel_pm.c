@@ -4668,6 +4668,13 @@ calculate_wm:
 	wp->linetime_us = fixed16_to_u32_round_up(
 					intel_get_linetime_us(cstate));
 
+	DRM_DEBUG_DRIVER("wm_param of plane(%d), x_tiled(%d), y_tiled(%d), rc_surface(%d), is_planar(%d), width(%x), cpp(%x), "
+		    "plane_pixel_rate(%d), y_min_scanlines(%x), plane_bytes_per_line(%x), plane_blocks_per_line(%x), "
+		    "y_tile_minimum(%x), linetime_us(%x), dbuf_block_size(%x)\n",
+		    plane_id, wp->x_tiled, wp->y_tiled, wp->rc_surface, wp->is_planar, wp->width, wp->cpp,
+		    wp->plane_pixel_rate, wp->y_min_scanlines, wp->plane_bytes_per_line, wp->plane_blocks_per_line.val,
+		    wp->y_tile_minimum.val, wp->linetime_us, wp->dbuf_block_size);
+
 	return 0;
 }
 
