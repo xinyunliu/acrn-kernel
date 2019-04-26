@@ -72,16 +72,24 @@ struct efp_child_device_config {
 	u8 i2c_speed;
 	u8 dp_onboard_redriver; /* 158 */
 	u8 dp_ondock_redriver; /* 158 */
+
+	/* HDMI Level Shifter */
 	u8 hdmi_level_shifter_value:4; /* 169 */
 	u8 hdmi_max_data_rate:4; /* 204 */
+
 	u16 dtd_buf_ptr; /* 161 */
+
+	/* flags 0 */
 	u8 edidless_efp:1; /* 161 */
 	u8 compression_enable:1; /* 198 */
 	u8 compression_method:1; /* 198 */
 	u8 ganged_edp:1; /* 202 */
 	u8 skip0:4;
+
+	/* Compression Structure Index */
 	u8 compression_structure_index:4; /* 198 */
 	u8 skip1:4;
+
 	u8 slave_port; /*  202 */
 	u8 skip2;
 	u8 dvo_port;
@@ -90,23 +98,31 @@ struct efp_child_device_config {
 	u8 ddc_pin;
 	u16 edid_ptr;
 	u8 dvo_config;
+
+	/* Flags 1 */
 	u8 efp_docked_port:1; /* 158 */
 	u8 lane_reversal:1; /* 184 */
 	u8 onboard_lspcon:1; /* 192 */
 	u8 iboost_enable:1; /* 196 */
 	u8 hpd_invert:1; /* BXT 196 */
 	u8 slip3:3;
+
+	/* Compatibility */
 	u8 hdmi_compat:1;
 	u8 dp_compat:1;
 	u8 tmds_compat:1;
 	u8 skip4:5;
+
 	u8 aux_channel;
 	u8 dongle_detect;
+
+	/* Capabilities */
 	u8 pipe_cap:2;
 	u8 sdvo_stall:1; /* 158 */
 	u8 hpd_status:2;
 	u8 integrated_encoder:1;
 	u8 skip5:2;
+
 	u8 dvo_wiring;
 	u8 mipi_bridge_type; /* 171 */
 	u16 device_class_ext;
@@ -132,6 +148,8 @@ struct vbt {
 	struct bdb_data_header driver_features_header;
 	struct bdb_driver_features driver_features;
 };
+
+bool gvt_emulate_hdmi = false;
 
 static void virt_vbt_generation(struct vbt *v)
 {
@@ -175,32 +193,59 @@ static void virt_vbt_generation(struct vbt *v)
 
 	/* portA */
 	v->child0.handle = DEVICE_TYPE_EFP1;
-	v->child0.device_type = DEVICE_TYPE_DP;
-	v->child0.dvo_port = DVO_PORT_DPA;
+	if(gvt_emulate_hdmi) {
+		v->child0.device_type = DEVICE_TYPE_HDMI;
+		v->child0.dvo_port = DVO_PORT_HDMIA;
+	}
+	else {
+		v->child0.device_type = DEVICE_TYPE_DP;
+		v->child0.dvo_port = DVO_PORT_DPA;
+	}
+
 	v->child0.aux_channel = DP_AUX_A;
 	v->child0.dp_compat = true;
 	v->child0.integrated_encoder = true;
 
 	/* portB */
 	v->child1.handle = DEVICE_TYPE_EFP2;
-	v->child1.device_type = DEVICE_TYPE_DP;
-	v->child1.dvo_port = DVO_PORT_DPB;
+	if(gvt_emulate_hdmi) {
+		v->child1.device_type = DEVICE_TYPE_HDMI;
+		v->child1.dvo_port = DVO_PORT_HDMIB;
+	}
+	else {
+		v->child1.device_type = DEVICE_TYPE_DP;
+		v->child1.dvo_port = DVO_PORT_DPB;
+	}
 	v->child1.aux_channel = DP_AUX_B;
 	v->child1.dp_compat = true;
 	v->child1.integrated_encoder = true;
 
 	/* portC */
 	v->child2.handle = DEVICE_TYPE_EFP3;
-	v->child2.device_type = DEVICE_TYPE_DP;
-	v->child2.dvo_port = DVO_PORT_DPC;
+	if(gvt_emulate_hdmi) {
+		v->child2.device_type = DEVICE_TYPE_HDMI;
+		v->child2.dvo_port = DVO_PORT_HDMIC;
+	}
+	else {
+		v->child2.device_type = DEVICE_TYPE_DP;
+		v->child2.dvo_port = DVO_PORT_DPC;
+	}
+
 	v->child2.aux_channel = DP_AUX_C;
 	v->child2.dp_compat = true;
 	v->child2.integrated_encoder = true;
 
 	/* portD */
 	v->child3.handle = DEVICE_TYPE_EFP4;
-	v->child3.device_type = DEVICE_TYPE_DP;
-	v->child3.dvo_port = DVO_PORT_DPD;
+	if(gvt_emulate_hdmi) {
+		v->child3.device_type = DEVICE_TYPE_HDMI;
+		v->child3.dvo_port = DVO_PORT_HDMID;
+	}
+	else {
+		v->child3.device_type = DEVICE_TYPE_DP;
+		v->child3.dvo_port = DVO_PORT_DPD;
+	}
+
 	v->child3.aux_channel = DP_AUX_D;
 	v->child3.dp_compat = true;
 	v->child3.integrated_encoder = true;

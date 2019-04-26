@@ -330,6 +330,8 @@ static int setup_virtual_monitor(struct intel_vgpu *vgpu, int port_num,
 	if (WARN_ON(resolution >= GVT_EDID_NUM))
 		return -EINVAL;
 
+	DRM_DEBUG_DRIVER("VGPU(%d) port(%d) type(%d) is_dp(%c)\n", vgpu->id, port_num, type, is_dp? 'Y':'N');
+
 	if (edid)
 		valid_extensions += ((struct edid *)edid)->extensions;
 	port->edid = kzalloc(sizeof(*(port->edid))
@@ -530,7 +532,7 @@ void intel_gvt_init_pipe_info(struct intel_gvt *gvt)
 	}
 }
 
-bool gvt_emulate_hdmi = false;
+extern bool gvt_emulate_hdmi;
 
 int setup_virtual_monitors(struct intel_vgpu *vgpu)
 {
@@ -545,6 +547,8 @@ int setup_virtual_monitors(struct intel_vgpu *vgpu)
 	/* BXT have to use port A for HDMI to support 3 HDMI monitors */
 	if (IS_BROXTON(dev_priv))
 		port = PORT_A;
+
+	DRM_DEBUG_DRIVER("gvt_emulate_hdmi: %c\n", gvt_emulate_hdmi?'Y':'N');
 
 	drm_connector_list_iter_begin(&vgpu->gvt->dev_priv->drm, &conn_iter);
 	for_each_intel_connector_iter(connector, &conn_iter) {
