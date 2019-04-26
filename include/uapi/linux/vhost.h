@@ -226,6 +226,6 @@ struct vhost_scsi_target {
 #define VHOST_VSOCK_SET_RUNNING		_IOW(VHOST_VIRTIO, 0x61, int)
 
 /* VHOST_AHDB specific defines */
-#define VHOST_SET_VMID _IOW(VHOST_VIRTIO, 0x40, int)
+#define VHOST_SET_VMID _IOW(VHOST_VIRTIO, 0x70, int)
 
 #endif
