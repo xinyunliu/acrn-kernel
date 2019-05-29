@@ -42,11 +42,11 @@
 #define WAIT_AFTER_SYNC_REQ 0
 #define REFS_PER_PAGE (PAGE_SIZE/sizeof(grant_ref_t))
 
-static int dmabuf_refcount(struct dma_buf *dma_buf)
+int dmabuf_refcount(struct dma_buf *dma_buf)
 {
 	if ((dma_buf != NULL) && (dma_buf->file != NULL))
 		return file_count(dma_buf->file);
-
+	printk("dma_buf or dmb_buf->file is NULL\n");
 	return -EINVAL;
 }
 
@@ -204,10 +204,17 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 	if (!dma_buf->priv)
 		return;
 
+	mutex_lock(&hy_drv_priv->lock);
+
 	imported = (struct imported_sgt_info *)dma_buf->priv;
 
-	if (!dmabuf_refcount(imported->dma_buf))
-		imported->dma_buf = NULL;
+	imported->dma_buf = NULL;
+
+	if (dma_buf != imported->dma_buf) {
+		dev_dbg(hy_drv_priv->dev, "%s: dma_buf changed!\n", __func__);
+		mutex_unlock(&hy_drv_priv->lock);
+		return;
+	}
 
 	imported->importers--;
 
@@ -237,6 +244,8 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 		kfree(imported->priv);
 		kfree(imported);
 	}
+
+	mutex_unlock(&hy_drv_priv->lock);
 }
 
 static int hyper_dmabuf_ops_begin_cpu_access(struct dma_buf *dmabuf,
