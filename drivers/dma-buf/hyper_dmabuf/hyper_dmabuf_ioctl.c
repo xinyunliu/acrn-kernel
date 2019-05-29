@@ -427,9 +427,8 @@ fail_attach:
 
 static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 {
-	struct ioctl_hyper_dmabuf_export_fd *export_fd_attr =
-			(struct ioctl_hyper_dmabuf_export_fd *)data;
-	struct hyper_dmabuf_bknd_ops *bknd_ops = hy_drv_priv->bknd_ops;
+	struct ioctl_hyper_dmabuf_export_fd *export_fd_attr;
+	struct hyper_dmabuf_bknd_ops *bknd_ops;
 	struct imported_sgt_info *imported;
 	struct hyper_dmabuf_req *req;
 	struct page **data_pgs;
@@ -438,6 +437,14 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 	int ret = 0;
 
 	dev_dbg(hy_drv_priv->dev, "%s entry\n", __func__);
+
+	export_fd_attr = (struct ioctl_hyper_dmabuf_export_fd *)data;
+	bknd_ops = hy_drv_priv->bknd_ops;
+
+
+	dev_dbg(hy_drv_priv->dev, "%s try export {id:%x key:%x %x %x}\n", __func__,
+				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
+				export_fd_attr->hid.rng_key[1], export_fd_attr->hid.rng_key[2]);
 
 	mutex_lock(&hy_drv_priv->lock);
 
@@ -457,7 +464,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		if (IS_ERR(imported->dma_buf)) {
 			mutex_unlock(&hy_drv_priv->lock);
 			dev_err(hy_drv_priv->dev,
-				"Buffer is invalid {id:%d key:%d %d %d}, cannot import\n",
+				"Buffer is invalid {id:%x key:%x %x %x}, cannot import\n",
 				imported->hid.id, imported->hid.rng_key[0],
 				imported->hid.rng_key[1], imported->hid.rng_key[2]);
 			return -EINVAL;
@@ -466,16 +473,24 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 		if (imported->valid == false) {
 			mutex_unlock(&hy_drv_priv->lock);
 			dev_err(hy_drv_priv->dev,
-				"Buffer is released {id:%d key:%d %d %d}, cannot import\n",
+				"Buffer is released {id:%x key:%x %x %x}, cannot import\n",
 				imported->hid.id, imported->hid.rng_key[0],
 				imported->hid.rng_key[1], imported->hid.rng_key[2]);
 			return -EINVAL;
 		}
+
+		if (!imported->dma_buf->file)
+			dev_err(hy_drv_priv->dev,
+					"%s: dma_buf->file is null\n", __func__);
+
 		get_dma_buf(imported->dma_buf);
 		export_fd_attr->fd = dma_buf_fd(imported->dma_buf,
 						export_fd_attr->flags);
 		mutex_unlock(&hy_drv_priv->lock);
-		dev_dbg(hy_drv_priv->dev, "%s exit\n", __func__);
+
+		dev_dbg(hy_drv_priv->dev, "%s exit {id:%x key:%x %x %x}\n", __func__,
+				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
+				export_fd_attr->hid.rng_key[1], export_fd_attr->hid.rng_key[2]);
 		return 0;
 	}
 
@@ -487,7 +502,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 	for (i = 0; i < 3; i++)
 		op[i+1] = imported->hid.rng_key[i];
 
-	dev_dbg(hy_drv_priv->dev, "Export FD of buffer {id:%d key:%d %d %d}\n",
+	dev_dbg(hy_drv_priv->dev, "Export FD of buffer {id:%x key:%x %x %x}\n",
 		imported->hid.id, imported->hid.rng_key[0],
 		imported->hid.rng_key[1], imported->hid.rng_key[2]);
 
@@ -521,7 +536,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 
 	if (ret == HYPER_DMABUF_REQ_ERROR) {
 		dev_err(hy_drv_priv->dev,
-			"Buffer invalid {id:%d key:%d %d %d}, cannot import\n",
+			"Buffer invalid {id:%x key:%x %x %x}, cannot import\n",
 			imported->hid.id, imported->hid.rng_key[0],
 			imported->hid.rng_key[1], imported->hid.rng_key[2]);
 
@@ -543,7 +558,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 
 	if (!imported->sgt) {
 		dev_dbg(hy_drv_priv->dev,
-			"buffer {id:%d key:%d %d %d} pages not mapped yet\n",
+			"buffer {id:%x key:%x %x %x} pages not mapped yet\n",
 			imported->hid.id, imported->hid.rng_key[0],
 			imported->hid.rng_key[1], imported->hid.rng_key[2]);
 
@@ -554,7 +569,7 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 
 		if (!data_pgs) {
 			dev_err(hy_drv_priv->dev,
-				"can't map pages hid {id:%d key:%d %d %d}\n",
+				"can't map pages hid {id:%x key:%x %x %x}\n",
 				imported->hid.id, imported->hid.rng_key[0],
 				imported->hid.rng_key[1],
 				imported->hid.rng_key[2]);
@@ -595,7 +610,9 @@ static int hyper_dmabuf_export_fd_ioctl(struct file *filp, void *data)
 
 	mutex_unlock(&hy_drv_priv->lock);
 
-	dev_dbg(hy_drv_priv->dev, "%s exit\n", __func__);
+	dev_dbg(hy_drv_priv->dev, "%s exit {id:%x key:%x %x %x}\n", __func__,
+				export_fd_attr->hid.id, export_fd_attr->hid.rng_key[0],
+				export_fd_attr->hid.rng_key[1], export_fd_attr->hid.rng_key[2]);
 	return ret;
 }
 
@@ -616,7 +633,7 @@ static void delayed_unexport(struct work_struct *work)
 	exported = container_of(work, struct exported_sgt_info, unexport.work);
 
 	dev_dbg(hy_drv_priv->dev,
-		"Marking buffer {id:%d key:%d %d %d} as invalid\n",
+		"Marking buffer {id:%x key:%x %x %x} as invalid\n",
 		exported->hid.id, exported->hid.rng_key[0],
 		exported->hid.rng_key[1], exported->hid.rng_key[2]);
 
@@ -641,12 +658,18 @@ static void delayed_unexport(struct work_struct *work)
 	ret = bknd_ops->send_req(exported->rdomid, req, true);
 	if (ret < 0) {
 		dev_err(hy_drv_priv->dev,
-			"unexport message for buffer {id:%d key:%d %d %d} failed\n",
+			"unexport message for buffer {id:%x key:%x %x %x} failed\n",
 			exported->hid.id, exported->hid.rng_key[0],
 			exported->hid.rng_key[1], exported->hid.rng_key[2]);
 	}
 
 	kfree(req);
+
+	dev_info(hy_drv_priv->dev,
+			"unexport message for buffer {id:%x key:%x %x %x} success\n",
+			exported->hid.id, exported->hid.rng_key[0],
+			exported->hid.rng_key[1], exported->hid.rng_key[2]);
+
 	exported->unexport_sched = false;
 
 	/* Immediately clean-up if it has never been exported by importer
@@ -657,7 +680,7 @@ static void delayed_unexport(struct work_struct *work)
 	 */
 	if (exported->active == 0) {
 		dev_dbg(hy_drv_priv->dev,
-			"claning up buffer {id:%d key:%d %d %d} completly\n",
+			"claning up buffer {id:%x key:%x %x %x} completly\n",
 			exported->hid.id, exported->hid.rng_key[0],
 			exported->hid.rng_key[1], exported->hid.rng_key[2]);
 
@@ -688,7 +711,7 @@ int hyper_dmabuf_unexport_ioctl(struct file *filp, void *data)
 	exported = hyper_dmabuf_find_exported(unexport_attr->hid);
 
 	dev_dbg(hy_drv_priv->dev,
-		"scheduling unexport of buffer {id:%d key:%d %d %d}\n",
+		"scheduling unexport of buffer {id:%x key:%x %x %x}\n",
 		unexport_attr->hid.id, unexport_attr->hid.rng_key[0],
 		unexport_attr->hid.rng_key[1], unexport_attr->hid.rng_key[2]);
 
@@ -727,7 +750,7 @@ static int hyper_dmabuf_query_ioctl(struct file *filp, void *data)
 							  &query_attr->info);
 		} else {
 			dev_err(hy_drv_priv->dev,
-				"hid {id:%d key:%d %d %d} not in exp list\n",
+				"hid {id:%x key:%x %x %x} not in exp list\n",
 				query_attr->hid.id,
 				query_attr->hid.rng_key[0],
 				query_attr->hid.rng_key[1],
@@ -743,7 +766,7 @@ static int hyper_dmabuf_query_ioctl(struct file *filp, void *data)
 							  &query_attr->info);
 		} else {
 			dev_err(hy_drv_priv->dev,
-				"hid {id:%d key:%d %d %d} not in imp list\n",
+				"hid {id:%x key:%x %x %x} not in imp list\n",
 				query_attr->hid.id,
 				query_attr->hid.rng_key[0],
 				query_attr->hid.rng_key[1],

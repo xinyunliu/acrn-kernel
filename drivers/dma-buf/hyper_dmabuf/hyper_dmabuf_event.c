@@ -46,6 +46,8 @@ static void send_event(struct hyper_dmabuf_event *e)
 	 * then remove the oldest event in the list
 	 */
 	if (hy_drv_priv->pending > MAX_DEPTH_EVENT_QUEUE - 1) {
+		dev_warn(hy_drv_priv->dev,
+				"event_list is full, omit the oldest\n");
 		oldest = list_first_entry(&hy_drv_priv->event_list,
 				struct hyper_dmabuf_event, link);
 		list_del(&oldest->link);
@@ -79,7 +81,7 @@ void hyper_dmabuf_events_release(void)
 
 	if (hy_drv_priv->pending) {
 		dev_err(hy_drv_priv->dev,
-			"possible leak on event_list\n");
+			"possible leak(%d) on event_list\n", hy_drv_priv->pending );
 	}
 
 	spin_unlock_irqrestore(&hy_drv_priv->event_lock, irqflags);
@@ -111,11 +113,8 @@ int hyper_dmabuf_import_event(hyper_dmabuf_id_t hid)
 	send_event(e);
 
 	dev_dbg(hy_drv_priv->dev,
-		"event number = %d :", hy_drv_priv->pending);
-
-	dev_dbg(hy_drv_priv->dev,
-		"generating events for {%d, %d, %d, %d}\n",
-		imported->hid.id, imported->hid.rng_key[0],
+		"generating import event(%d) for {%x, %x, %x, %x}\n",
+		hy_drv_priv->pending, imported->hid.id, imported->hid.rng_key[0],
 		imported->hid.rng_key[1], imported->hid.rng_key[2]);
 
 	return 0;

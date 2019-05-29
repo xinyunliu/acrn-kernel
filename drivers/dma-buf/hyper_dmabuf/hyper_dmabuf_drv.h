@@ -115,4 +115,11 @@ struct hyper_dmabuf_bknd_ops {
 /* exporting global drv private info */
 extern struct hyper_dmabuf_private *hy_drv_priv;
 
+#define hdma_dbg(fmt, args...) \
+	dev_dbg(hy_drv_priv->dev, fmt, ##args)
+
+#define hdma_dbg2(fmt, args...) \
+	trace_printk("hyper_dmabuf: "fmt, ##args)
+
+
 #endif /* __LINUX_PUBLIC_HYPER_DMABUF_DRV_H__ */

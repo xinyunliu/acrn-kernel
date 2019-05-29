@@ -34,7 +34,6 @@
 #include "hyper_dmabuf_struct.h"
 #include "hyper_dmabuf_sgl_proc.h"
 
-#define REFS_PER_PAGE (PAGE_SIZE/sizeof(grant_ref_t))
 
 /* return total number of pages referenced by a sgt
  * for pre-calculation of # of pages behind a given sgt

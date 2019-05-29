@@ -457,6 +457,7 @@ err_dmabuf:
 	kfree(dmabuf);
 err_module:
 	module_put(exp_info->owner);
+	printk("%s: failed export dma_buf\n", __func__);
 	return ERR_PTR(ret);
 }
 EXPORT_SYMBOL_GPL(dma_buf_export);
@@ -631,7 +632,14 @@ struct sg_table *dma_buf_map_attachment(struct dma_buf_attachment *attach,
 	if (WARN_ON(!attach || !attach->dmabuf))
 		return ERR_PTR(-EINVAL);
 
+	if (WARN_ON(!attach->dmabuf->ops))
+		return ERR_PTR(-EINVAL);
+
+	if (WARN_ON(!attach->dmabuf->ops->map_dma_buf))
+		return ERR_PTR(-EINVAL);
+
 	sg_table = attach->dmabuf->ops->map_dma_buf(attach, direction);
+
 	if (!sg_table)
 		sg_table = ERR_PTR(-ENOMEM);
 
