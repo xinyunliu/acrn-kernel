@@ -60,6 +60,10 @@ static void send_event(struct hyper_dmabuf_event *e)
 
 	hy_drv_priv->pending++;
 
+	dev_dbg(hy_drv_priv->dev,
+		"generating import event(%d) for hid.id = 0x%x\n",
+		hy_drv_priv->pending, e->event_data.hdr.hid.id);
+
 	wake_up_interruptible(&hy_drv_priv->event_wait);
 
 	spin_unlock_irqrestore(&hy_drv_priv->event_lock, irqflags);
@@ -111,11 +115,6 @@ int hyper_dmabuf_import_event(hyper_dmabuf_id_t hid)
 	e->event_data.hdr.size = imported->sz_priv;
 
 	send_event(e);
-
-	dev_dbg(hy_drv_priv->dev,
-		"generating import event(%d) for {%x, %x, %x, %x}\n",
-		hy_drv_priv->pending, imported->hid.id, imported->hid.rng_key[0],
-		imported->hid.rng_key[1], imported->hid.rng_key[2]);
 
 	return 0;
 }
