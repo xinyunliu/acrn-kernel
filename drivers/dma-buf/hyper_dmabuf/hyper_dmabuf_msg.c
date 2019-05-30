@@ -148,6 +148,7 @@ static void cmd_process_work(struct work_struct *work)
 		 * priv synchronization. for existing imported_sgt_info
 		 * so not creating a new one
 		 */
+		mutex_lock(&hy_drv_priv->lock);
 		if (req->op[4] == 0) {
 			hyper_dmabuf_id_t exist = {req->op[0],
 						   {req->op[1], req->op[2],
@@ -230,6 +231,7 @@ static void cmd_process_work(struct work_struct *work)
 		hyper_dmabuf_import_event(imported->hid);
 #endif
 
+		mutex_unlock(&hy_drv_priv->lock);
 		break;
 
 	case HYPER_DMABUF_OPS_TO_SOURCE:
