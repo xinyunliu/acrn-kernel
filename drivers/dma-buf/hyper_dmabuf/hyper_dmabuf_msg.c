@@ -159,6 +159,7 @@ static void cmd_process_work(struct work_struct *work)
 			if (!imported) {
 				dev_err(hy_drv_priv->dev,
 					"Can't find imported sgt_info\n");
+				mutex_unlock(&hy_drv_priv->lock);
 				break;
 			}
 
@@ -173,6 +174,7 @@ static void cmd_process_work(struct work_struct *work)
 				if (!imported->priv) {
 					/* set it invalid */
 					imported->valid = 0;
+					mutex_unlock(&hy_drv_priv->lock);
 					break;
 				}
 			}
@@ -185,19 +187,23 @@ static void cmd_process_work(struct work_struct *work)
 			hyper_dmabuf_import_event(imported->hid);
 #endif
 
+			mutex_unlock(&hy_drv_priv->lock);
 			break;
 		}
 
 		imported = kcalloc(1, sizeof(*imported), GFP_KERNEL);
 
-		if (!imported)
+		if (!imported) {
+			mutex_unlock(&hy_drv_priv->lock);
 			break;
+		}
 
 		imported->sz_priv = req->op[9];
 		imported->priv = kcalloc(1, req->op[9], GFP_KERNEL);
 
 		if (!imported->priv) {
 			kfree(imported);
+			mutex_unlock(&hy_drv_priv->lock);
 			break;
 		}
 
