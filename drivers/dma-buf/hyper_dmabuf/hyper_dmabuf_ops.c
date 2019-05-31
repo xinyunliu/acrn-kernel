@@ -224,7 +224,7 @@ static void hyper_dmabuf_ops_release(struct dma_buf *dma_buf)
 	dev_dbg(hy_drv_priv->dev, "%s: clear imported->dma_buf\n", __func__);
 	imported->dma_buf = NULL;
 
-	BUG_ON(imported->importers != 1);
+	WARN_ON(imported->importers != 1);
 
 	bknd_ops->unmap_shared_pages(&imported->refs_info,
 				     imported->nents);
