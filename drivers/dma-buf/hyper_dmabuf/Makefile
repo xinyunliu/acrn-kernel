@@ -7,6 +7,7 @@ obj-y := hyper_dmabuf_drv.o \
 	 hyper_dmabuf_id.o \
 	 hyper_dmabuf_remote_sync.o \
 	 hyper_dmabuf_query.o \
+	 hyper_dmabuf_debug.o \
 
 ifeq ($(CONFIG_HYPER_DMABUF_EVENT_GEN), y)
 	obj-y += hyper_dmabuf_event.o
