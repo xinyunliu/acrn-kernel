@@ -58,9 +58,10 @@ static void send_event(struct hyper_dmabuf_event *e)
 
 	hy_drv_priv->pending++;
 
-	dev_dbg(hy_drv_priv->dev,
-		"generating import event(%d) for hid.id:%x\n",
-		hy_drv_priv->pending, e->event_data.hdr.hid.id);
+	trace_printk("send_export_event(%d) for {id:%08x key:%08x %08x %08x}\n",
+		hy_drv_priv->pending, e->event_data.hdr.hid.id,
+		e->event_data.hdr.hid.rng_key[0],e->event_data.hdr.hid.rng_key[1],
+		e->event_data.hdr.hid.rng_key[2]);
 
 	wake_up_interruptible(&hy_drv_priv->event_wait);
 

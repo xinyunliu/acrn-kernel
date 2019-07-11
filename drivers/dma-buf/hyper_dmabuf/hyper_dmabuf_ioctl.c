@@ -121,7 +121,13 @@ static int send_export_msg(struct exported_sgt_info *exported,
 	/* composing a message to the importer */
 	hyper_dmabuf_create_req(req, HYPER_DMABUF_EXPORT, &op[0]);
 
+	trace_printk("send_export_msg: {id:%08x key:%08x %08x %08x}\n",
+		op[0], op[1], op[2], op[3]);
+
 	ret = bknd_ops->send_req(exported->rdomid, req, true);
+
+	trace_printk("send_export_msg: {id:%08x key:%08x %08x %08x} %s\n",
+		op[0], op[1], op[2], op[3], ret==0? "Successed": "failed");
 
 	kfree(req);
 
