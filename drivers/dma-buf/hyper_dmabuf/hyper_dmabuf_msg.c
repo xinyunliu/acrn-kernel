@@ -419,7 +419,7 @@ int hyper_dmabuf_msg_parse(int domid, struct hyper_dmabuf_req *req)
 
 	INIT_WORK(&(proc->work), cmd_process_work);
 
-	queue_work(hy_drv_priv->work_queue, &(proc->work));
+	queue_work_on(0, hy_drv_priv->work_queue, &(proc->work));
 
 	return req->cmd;
 }
