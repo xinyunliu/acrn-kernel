@@ -78,9 +78,9 @@ static void send_event(struct hyper_dmabuf_event *e)
 		e->event_data.hdr.hid.rng_key[0],e->event_data.hdr.hid.rng_key[1],
 		e->event_data.hdr.hid.rng_key[2]);
 */
-	wake_up_interruptible(&hy_drv_priv->event_wait);
-
 	spin_unlock_irqrestore(&hy_drv_priv->event_lock, irqflags);
+
+	wake_up_interruptible(&hy_drv_priv->event_wait);
 }
 
 void hyper_dmabuf_events_release(void)
