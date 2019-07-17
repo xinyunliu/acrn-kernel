@@ -34,11 +34,20 @@
 #include "hyper_dmabuf_struct.h"
 #include "hyper_dmabuf_list.h"
 #include "hyper_dmabuf_event.h"
+#include "hyper_dmabuf_debug.h"
 
 static void send_event(struct hyper_dmabuf_event *e)
 {
 	struct hyper_dmabuf_event *oldest;
 	unsigned long irqflags;
+
+	struct vm_buffer_info *p = (struct vm_buffer_info *) ((char *)(e->event_data.data) + MSG_H_SIZE);
+
+	trace_printk("send_export_event(%d) for {id:%08x key:%08x %08x %08x} cnt:%d idx:%d fmt:%x\n",
+		hy_drv_priv->pending, e->event_data.hdr.hid.id,
+		e->event_data.hdr.hid.rng_key[0],e->event_data.hdr.hid.rng_key[1],
+		e->event_data.hdr.hid.rng_key[2],
+		p->counter, p->surf_index, p->tile_format);
 
 	spin_lock_irqsave(&hy_drv_priv->event_lock, irqflags);
 
@@ -48,6 +57,12 @@ static void send_event(struct hyper_dmabuf_event *e)
 	if (hy_drv_priv->pending > MAX_DEPTH_EVENT_QUEUE - 1) {
 		oldest = list_first_entry(&hy_drv_priv->event_list,
 				struct hyper_dmabuf_event, link);
+
+		trace_printk("delete event #%d for {id:%08x key:%08x %08x %08x}\n",
+			hy_drv_priv->pending, oldest->event_data.hdr.hid.id,
+			oldest->event_data.hdr.hid.rng_key[0],oldest->event_data.hdr.hid.rng_key[1],
+			oldest->event_data.hdr.hid.rng_key[2]);
+
 		list_del(&oldest->link);
 		hy_drv_priv->pending--;
 		kfree(oldest);
@@ -57,12 +72,12 @@ static void send_event(struct hyper_dmabuf_event *e)
 		      &hy_drv_priv->event_list);
 
 	hy_drv_priv->pending++;
-
+/*
 	trace_printk("send_export_event(%d) for {id:%08x key:%08x %08x %08x}\n",
 		hy_drv_priv->pending, e->event_data.hdr.hid.id,
 		e->event_data.hdr.hid.rng_key[0],e->event_data.hdr.hid.rng_key[1],
 		e->event_data.hdr.hid.rng_key[2]);
-
+*/
 	wake_up_interruptible(&hy_drv_priv->event_wait);
 
 	spin_unlock_irqrestore(&hy_drv_priv->event_lock, irqflags);
