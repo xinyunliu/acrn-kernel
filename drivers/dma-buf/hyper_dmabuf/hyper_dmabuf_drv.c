@@ -130,6 +130,8 @@ static ssize_t hyper_dmabuf_event_read(struct file *filp, char __user *buffer,
 
 	while (1) {
 		struct hyper_dmabuf_event *e = NULL;
+		struct vm_buffer_info *p = NULL;
+
 
 		spin_lock_irq(&hy_drv_priv->event_lock);
 		if (!list_empty(&hy_drv_priv->event_list)) {
@@ -201,6 +203,13 @@ put_back_event:
 			}
 
 			ret += e->event_data.hdr.size;
+
+			p = (struct vm_buffer_info *) ((char *)(e->event_data.data) + MSG_H_SIZE);
+			trace_printk("read event(%d) for {id:%08x key:%08x %08x %08x} cnt:%d idx:%d fmt:%x\n",
+				hy_drv_priv->pending, e->event_data.hdr.hid.id,
+				e->event_data.hdr.hid.rng_key[0],e->event_data.hdr.hid.rng_key[1],
+				e->event_data.hdr.hid.rng_key[2],
+				p->counter, p->surf_index, p->tile_format);
 
 			spin_lock_irq(&hy_drv_priv->event_lock);
 			hy_drv_priv->pending--;

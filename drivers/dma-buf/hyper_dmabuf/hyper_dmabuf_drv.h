@@ -27,6 +27,7 @@
 
 #include <linux/device.h>
 #include <linux/hyper_dmabuf.h>
+#include "hyper_dmabuf_debug.h"
 
 struct hyper_dmabuf_req;
 
