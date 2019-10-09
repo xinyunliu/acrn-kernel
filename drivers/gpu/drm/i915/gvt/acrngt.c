@@ -316,6 +316,15 @@ static int acrngt_emulation_thread(void *priv)
 				req->client == info->client) {
 				gvt_dbg_core("handle ioreq type %d\n",
 						req->type);
+
+				/* record the last `ACRNGT_MAX_IOREQ_VCPU` io request
+				 * vcpu = [0,1,2,3] predefined in drivers/vhm/vhm_vm_mngt.c
+				 * nfo->max_vcpu = 4;
+				 */
+				info->ioreqs[vcpu].idx %= ACRNGT_MAX_IOREQ_VCPU;
+
+				memcpy(&info->ioreqs[vcpu].reqs[info->ioreqs[vcpu].idx++],req, sizeof(*req));
+
 				switch (req->type) {
 				case REQ_PCICFG:
 					ret = acrngt_hvm_pio_emulation(vgpu, req);

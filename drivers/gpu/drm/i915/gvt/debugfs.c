@@ -24,6 +24,7 @@
 #include <linux/list_sort.h>
 #include "i915_drv.h"
 #include "gvt.h"
+#include "acrngt.h"
 
 struct mmio_diff_param {
 	struct intel_vgpu *vgpu;
@@ -186,6 +187,59 @@ DEFINE_SIMPLE_ATTRIBUTE(vgpu_scan_nonprivbb_fops,
 			vgpu_scan_nonprivbb_get, vgpu_scan_nonprivbb_set,
 			"0x%llx\n");
 
+
+
+
+/* Show the all ioreqs. */
+static int vgpu_ioreqs_show(struct seq_file *s, void *unused)
+{
+	struct intel_vgpu *vgpu = s->private;
+	struct intel_gvt *gvt = vgpu->gvt;
+	struct acrngt_hvm_dev *info = (struct acrngt_hvm_dev *)vgpu->handle;
+	int nr_vcpus = info->nr_vcpu;
+
+	int vcpu, idx;
+	struct vhm_request *req;
+
+	seq_printf(s, "%8s %8s %8s %8s %8s %8s %8s %8s\n", "vCPU", "index", "State", "Addr", "Value", "Size", "R/W", "BDF");
+
+
+	mutex_lock(&gvt->lock);
+	mmio_hw_access_pre(gvt->dev_priv);
+
+	for (vcpu = 0; vcpu < nr_vcpus; vcpu++) {
+		for (idx = 0; idx < ACRNGT_MAX_IOREQ_VCPU ;idx++)  {
+			req = &info->ioreqs[vcpu].reqs[idx];
+			if (req->type == REQ_PCICFG){
+				seq_printf(s, "%8x %8x %8x %08x %8x %08llx %8x %x:%x:%x\n",
+						vcpu, info->ioreqs[vcpu].idx,
+						req->processed.counter,
+						req->reqs.pci_request.reg,
+						req->reqs.pci_request.value,
+						req->reqs.pci_request.size,
+						req->reqs.pci_request.direction,
+						req->reqs.pci_request.bus,
+						req->reqs.pci_request.dev,
+						req->reqs.pci_request.func);
+			} else {
+				seq_printf(s, "%8x %8x %8x %08llx %8llx %08llx %8x\n",
+						vcpu, info->ioreqs[vcpu].idx,
+						req->processed.counter,
+						req->reqs.mmio_request.address,
+						req->reqs.mmio_request.value,
+						req->reqs.mmio_request.size,
+						req->reqs.mmio_request.direction);
+			}
+		}
+	}
+
+	mmio_hw_access_post(gvt->dev_priv);
+	mutex_unlock(&gvt->lock);
+	return 0;
+}
+
+DEFINE_SHOW_ATTRIBUTE(vgpu_ioreqs);
+
 /**
  * intel_gvt_debugfs_add_vgpu - register debugfs entries for a vGPU
  * @vgpu: a vGPU
@@ -217,6 +271,12 @@ int intel_gvt_debugfs_add_vgpu(struct intel_vgpu *vgpu)
 				 vgpu, &vgpu_scan_nonprivbb_fops);
 	if (!ent)
 		return -ENOMEM;
+
+	ent = debugfs_create_file("ioreqs", 0444, vgpu->debugfs,
+				  vgpu, &vgpu_ioreqs_fops);
+	if (!ent)
+		return -ENOMEM;
+
 
 	return 0;
 }

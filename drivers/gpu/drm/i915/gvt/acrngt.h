@@ -22,8 +22,11 @@
  *
  */
 
+
 #ifndef INTEL_GVT_ACRNGT_H
 #define INTEL_GVT_ACRNGT_H
+
+#include <linux/vhm/acrn_common.h>
 
 extern struct intel_gvt *gvt_instance;
 extern const struct intel_gvt_ops *acrn_intel_gvt_ops;
@@ -33,6 +36,13 @@ extern const struct intel_gvt_ops *acrn_intel_gvt_ops;
 #define VMEM_1MB		(1ULL << 20)	/* the size of the first 1MB */
 
 typedef uint16_t domid_t;
+
+#define ACRNGT_MAX_IOREQ_VCPU 10
+struct iorequst_rec {
+       struct vhm_request reqs[ACRNGT_MAX_IOREQ_VCPU];
+       int idx;
+};
+
 
 /*
  * acrngt_hvm_dev is a wrapper of a vGPU instance which is reprensented by the
@@ -55,6 +65,7 @@ struct acrngt_hvm_dev {
 	long thread_flags;
 	struct task_struct *timer_thread;
 	wait_queue_head_t timer_thread_wq;
+	struct iorequst_rec ioreqs[4]; /* 4 vgpus */
 };
 
 struct acrngt_hvm_params {
