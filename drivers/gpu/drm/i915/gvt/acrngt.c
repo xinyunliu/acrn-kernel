@@ -242,6 +242,7 @@ static int acrngt_hvm_write_handler(struct intel_vgpu *vgpu, uint64_t pa,
 static int acrngt_hvm_mmio_emulation(struct intel_vgpu *vgpu,
 		struct vhm_request *req)
 {
+	static int submit_counter = 0;
 	if (req->reqs.mmio_request.direction == REQUEST_READ) {
 		/* MMIO READ */
 		gvt_dbg_core("handle mmio read emulation at address 0x%llx\n",
@@ -255,6 +256,17 @@ static int acrngt_hvm_mmio_emulation(struct intel_vgpu *vgpu,
 			return -EINVAL;
 		}
 	} else if (req->reqs.mmio_request.direction == REQUEST_WRITE) {
+
+		if ((req->reqs.mmio_request.address & 0xffff) == 0x2230) {
+			submit_counter++;
+			if (submit_counter % 4 == 0) {
+				printk("Write to 0x2230 %d times\n", submit_counter);
+			}
+			if ((submit_counter > 200)) {
+				printk("return 0xff when Write to 0x2230 >100 times\n");
+				return 0xff; //flag to simulate soft lockup
+			}
+		}
 		/* MMIO Write */
 		if (acrngt_hvm_write_handler(vgpu,
 				req->reqs.mmio_request.address,
@@ -338,6 +350,13 @@ static int acrngt_emulation_thread(void *priv)
 						req->type);
 					ret = -EINVAL;
 					break;
+				}
+				/* bypass to trigger soft lock up */
+				if (ret == 0xff) {
+					printk("handle 0xff, sleep 22s ....\n");
+					//mdelay(22000);
+					printk("handle 0xff done, continue....\n");
+					continue;
 				}
 				/* error handling */
 				if (ret)
