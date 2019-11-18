@@ -455,8 +455,8 @@ static int submit_context(struct intel_vgpu *vgpu, int ring_id,
 	if (emulate_schedule_in)
 		workload->elsp_dwords = s->execlist[ring_id].elsp_dwords;
 
-	gvt_dbg_el("workload %p emulate schedule_in %d\n", workload,
-			emulate_schedule_in);
+	gvt_dbg_el("workload %p on ring(%d) emulate schedule_in %d\n", workload,
+			ring_id, emulate_schedule_in);
 
 	intel_vgpu_queue_workload(workload);
 	return 0;
