@@ -530,6 +530,10 @@ static const struct pci_device_id virtio_pci_id_table[] = {
 
 #define ACRN_VIRTIO_DEVICE_ID_I2C 0x860A
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, ACRN_VIRTIO_DEVICE_ID_I2C) },
+
+#define ACRN_VIRTIO_DEVICE_ID_AHDB 0x8610
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, ACRN_VIRTIO_DEVICE_ID_AHDB) },
+
 #endif /* CONFIG_ACRN_VIRTIO_DEVICES */
 	{ 0 }
 };
