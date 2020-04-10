@@ -347,7 +347,6 @@
 	INTEL_VGA_DEVICE(0x590A, info) /* SRV GT1 */
 
 #define INTEL_KBL_GT2_IDS(info)	\
-	INTEL_VGA_DEVICE(0x3EA0, info), /* ULT GT2 */ \
 	INTEL_VGA_DEVICE(0x5916, info), /* ULT GT2 */ \
 	INTEL_VGA_DEVICE(0x5917, info), /* Mobile GT2 */ \
 	INTEL_VGA_DEVICE(0x5921, info), /* ULT GT2F */ \
