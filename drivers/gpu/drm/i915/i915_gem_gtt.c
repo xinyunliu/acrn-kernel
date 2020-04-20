@@ -3034,6 +3034,8 @@ static void setup_private_pat(struct intel_uncore *uncore)
 
 	GEM_BUG_ON(INTEL_GEN(i915) < 8);
 
+	DRM_DEBUG_DRIVER("gen:%d gen9_lp:%d\n", INTEL_GEN(i915),
+			IS_GEN9_LP(i915));
 	if (INTEL_GEN(i915) >= 12)
 		tgl_setup_private_ppat(uncore);
 	else if (INTEL_GEN(i915) >= 10)
@@ -3245,6 +3247,8 @@ static int ggtt_probe_hw(struct i915_ggtt *ggtt, struct intel_gt *gt)
 	}
 
 	/* GMADR is the PCI mmio aperture into the global GTT. */
+
+	DRM_DEBUG_DRIVER("GGTT gmadr = %llx \n", ggtt->gmadr.start);
 	DRM_DEBUG_DRIVER("GGTT size = %lluM\n", ggtt->vm.total >> 20);
 	DRM_DEBUG_DRIVER("GMADR size = %lluM\n", (u64)ggtt->mappable_end >> 20);
 	DRM_DEBUG_DRIVER("DSM size = %lluM\n",
