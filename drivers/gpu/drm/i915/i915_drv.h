@@ -1759,13 +1759,6 @@ static inline bool intel_vtd_active(void)
 	if (intel_iommu_gfx_mapped)
 		return true;
 #endif
-
-	if (intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_ACRN) {
-
-		printk("vtd: on\n");
-		return true;
-	}
-
 	return false;
 }
 
