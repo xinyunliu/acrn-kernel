@@ -271,6 +271,7 @@ static int gen6_hw_domain_reset(struct intel_gt *gt, u32 hw_domain_mask)
 					   GEN6_GDRST, hw_domain_mask, 0,
 					   500, 0,
 					   NULL);
+	GEM_TRACE("0x%08x engines reset\n", hw_domain_mask);
 	if (err)
 		DRM_DEBUG_DRIVER("Wait for 0x%08x engines reset failed\n",
 				 hw_domain_mask);
@@ -465,6 +466,7 @@ static int gen8_engine_reset_prepare(struct intel_engine_cs *engine)
 	int ret;
 
 	ack = intel_uncore_read_fw(uncore, reg);
+	GEM_TRACE("ack=%x\n", ack);
 	if (ack & RESET_CTL_CAT_ERROR) {
 		/*
 		 * For catastrophic errors, ready-for-reset sequence
@@ -536,6 +538,7 @@ static int gen8_reset_engines(struct intel_gt *gt,
 		ret = gen6_reset_engines(gt, engine_mask, retry);
 
 skip_reset:
+	GEM_TRACE("skip_reset\n");
 	for_each_engine_masked(engine, gt, engine_mask, tmp)
 		gen8_engine_reset_cancel(engine);
 

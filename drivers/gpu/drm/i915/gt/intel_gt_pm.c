@@ -157,6 +157,7 @@ void intel_gt_sanitize(struct intel_gt *gt, bool force)
 
 	intel_uc_sanitize(&gt->uc);
 
+	GEM_TRACE("reset engines is starting...\n");
 	for_each_engine(engine, gt, id)
 		if (engine->reset.prepare)
 			engine->reset.prepare(engine);
@@ -172,6 +173,7 @@ void intel_gt_sanitize(struct intel_gt *gt, bool force)
 		if (engine->reset.finish)
 			engine->reset.finish(engine);
 
+	GEM_TRACE("reset engines is done\n");
 	intel_uncore_forcewake_put(gt->uncore, FORCEWAKE_ALL);
 	intel_runtime_pm_put(gt->uncore->rpm, wakeref);
 }

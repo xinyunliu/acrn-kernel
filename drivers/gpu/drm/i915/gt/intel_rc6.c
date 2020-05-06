@@ -117,6 +117,7 @@ static void gen9_rc6_enable(struct intel_rc6 *rc6)
 	enum intel_engine_id id;
 	u32 rc6_mode;
 
+	GEM_TRACE(" do enable rc6\n");
 	/* 2b: Program RC6 thresholds.*/
 	if (INTEL_GEN(rc6_to_i915(rc6)) >= 10) {
 		set(uncore, GEN6_RC6_WAKE_RATE_LIMIT, 54 << 16 | 85);
@@ -493,9 +494,9 @@ static void __intel_rc6_disable(struct intel_rc6 *rc6)
 
 	intel_uncore_forcewake_get(uncore, FORCEWAKE_ALL);
 	if (INTEL_GEN(i915) >= 9)
-		set(uncore, GEN9_PG_ENABLE, 0);
-	set(uncore, GEN6_RC_CONTROL, 0);
-	set(uncore, GEN6_RC_STATE, 0);
+		set(uncore, GEN9_PG_ENABLE, 0); // 0xa210
+	set(uncore, GEN6_RC_CONTROL, 0);	// 0xa090
+	set(uncore, GEN6_RC_STATE, 0);		// 0xa094
 	intel_uncore_forcewake_put(uncore, FORCEWAKE_ALL);
 }
 
