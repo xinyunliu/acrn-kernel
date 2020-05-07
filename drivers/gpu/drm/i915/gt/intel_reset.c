@@ -466,7 +466,7 @@ static int gen8_engine_reset_prepare(struct intel_engine_cs *engine)
 	int ret;
 
 	ack = intel_uncore_read_fw(uncore, reg);
-	GEM_TRACE("ack=%x\n", ack);
+	GEM_TRACE("gen8_engine_reset_prepare() ack=%x\n", ack);
 	if (ack & RESET_CTL_CAT_ERROR) {
 		/*
 		 * For catastrophic errors, ready-for-reset sequence
@@ -514,8 +514,10 @@ static int gen8_reset_engines(struct intel_gt *gt,
 
 	for_each_engine_masked(engine, gt, engine_mask, tmp) {
 		ret = gen8_engine_reset_prepare(engine);
-		if (ret && !reset_non_ready)
+		if (ret && !reset_non_ready) {
+			GEM_TRACE("skip_reset\n");
 			goto skip_reset;
+		}
 
 		/*
 		 * If this is not the first failed attempt to prepare,
@@ -538,7 +540,6 @@ static int gen8_reset_engines(struct intel_gt *gt,
 		ret = gen6_reset_engines(gt, engine_mask, retry);
 
 skip_reset:
-	GEM_TRACE("skip_reset\n");
 	for_each_engine_masked(engine, gt, engine_mask, tmp)
 		gen8_engine_reset_cancel(engine);
 
@@ -980,9 +981,11 @@ void intel_gt_reset(struct intel_gt *gt,
 	if (!__intel_gt_unset_wedged(gt))
 		goto unlock;
 
-	if (reason)
+	if (reason) {
 		dev_notice(gt->i915->drm.dev,
 			   "Resetting chip for %s\n", reason);
+		GEM_TRACE("Resetting chip for %s\n", reason);
+	}
 	atomic_inc(&gt->i915->gpu_error.reset_count);
 
 	awake = reset_prepare(gt);
@@ -992,14 +995,20 @@ void intel_gt_reset(struct intel_gt *gt,
 			dev_err(gt->i915->drm.dev, "GPU reset not supported\n");
 		else
 			DRM_DEBUG_DRIVER("GPU reset disabled\n");
+
+		GEM_TRACE("GPU reset not supported or disabled\n");
 		goto error;
 	}
 
-	if (INTEL_INFO(gt->i915)->gpu_reset_clobbers_display)
+	if (INTEL_INFO(gt->i915)->gpu_reset_clobbers_display) {
+
+		GEM_TRACE("gpu_reset_clobbers_display: yes\n");
 		intel_runtime_pm_disable_interrupts(gt->i915);
+	}
 
 	if (do_reset(gt, stalled_mask)) {
 		dev_err(gt->i915->drm.dev, "Failed to reset chip\n");
+		GEM_TRACE("Failed to reset chip\n");
 		goto taint;
 	}
 
