@@ -54,6 +54,12 @@ MODULE_PARM_DESC(debug, "Enable debug output, where each bit enables a debug cat
 "\t\tBit 8 (0x100) will enable DP messages (displayport code)");
 module_param_named(debug, drm_debug, int, 0600);
 
+#if IS_ENABLED(CONFIG_DRM_I915_TRACE_GEM)
+#define GEM_TRACE(...) trace_printk(__VA_ARGS__)
+#else
+#define GEM_TRACE(...) do { } while (0)
+#endif
+
 void __drm_puts_coredump(struct drm_printer *p, const char *str)
 {
 	struct drm_print_iterator *iterator = p->arg;
@@ -252,6 +258,10 @@ void drm_dev_printk(const struct device *dev, const char *level,
 		printk("%s" "[" DRM_NAME ":%ps] %pV",
 		       level, __builtin_return_address(0), &vaf);
 
+	GEM_TRACE("%s" "[" DRM_NAME ":%ps] %pV",
+		       level, __builtin_return_address(0), &vaf);
+
+
 	va_end(args);
 }
 EXPORT_SYMBOL(drm_dev_printk);
@@ -276,6 +286,9 @@ void drm_dev_dbg(const struct device *dev, unsigned int category,
 		printk(KERN_DEBUG "[" DRM_NAME ":%ps] %pV",
 		       __builtin_return_address(0), &vaf);
 
+	GEM_TRACE(KERN_DEBUG "[" DRM_NAME ":%ps] %pV",
+		__builtin_return_address(0), &vaf);
+
 	va_end(args);
 }
 EXPORT_SYMBOL(drm_dev_dbg);
@@ -295,6 +308,8 @@ void drm_dbg(unsigned int category, const char *format, ...)
 	printk(KERN_DEBUG "[" DRM_NAME ":%ps] %pV",
 	       __builtin_return_address(0), &vaf);
 
+	GEM_TRACE(KERN_DEBUG "[" DRM_NAME ":%ps] %pV",
+	       __builtin_return_address(0), &vaf);
 	va_end(args);
 }
 EXPORT_SYMBOL(drm_dbg);
@@ -311,6 +326,8 @@ void drm_err(const char *format, ...)
 	printk(KERN_ERR "[" DRM_NAME ":%ps] *ERROR* %pV",
 	       __builtin_return_address(0), &vaf);
 
+	GEM_TRACE(KERN_ERR "[" DRM_NAME ":%ps] *ERROR* %pV",
+	       __builtin_return_address(0), &vaf);
 	va_end(args);
 }
 EXPORT_SYMBOL(drm_err);
