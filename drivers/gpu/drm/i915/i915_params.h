@@ -86,6 +86,7 @@ struct drm_printer;
 	param(unsigned long, avail_planes_per_pipe, 0) \
 	param(unsigned long, domain_plane_owners, 0) \
 	param(bool, enable_context_restore, false) \
+	param(bool, enable_opregion, false) \
 	param(bool, enable_hp_work, false)
 
 
