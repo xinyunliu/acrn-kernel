@@ -3008,6 +3008,7 @@ static void reset_csb_pointers(struct intel_engine_cs *engine)
 	struct intel_engine_execlists * const execlists = &engine->execlists;
 	const unsigned int reset_value = execlists->csb_size - 1;
 
+	GEM_TRACE("start\n");
 	ring_set_paused(engine, 0);
 
 	/*
@@ -3033,6 +3034,8 @@ static void reset_csb_pointers(struct intel_engine_cs *engine)
 
 	invalidate_csb_entries(&execlists->csb_status[0],
 			       &execlists->csb_status[reset_value]);
+
+	GEM_TRACE("end. head:%d tail:%d\n", execlists->csb_head, *execlists->csb_write);
 }
 
 static void __execlists_reset_reg_state(const struct intel_context *ce,
