@@ -455,6 +455,12 @@ static bool rc6_supported(struct intel_rc6 *rc6)
 {
 	struct drm_i915_private *i915 = rc6_to_i915(rc6);
 
+	DRM_DEBUG_DRIVER("param enable_rc6:%c\n", i915_modparams.enable_rc6 ? 'Y': 'N');
+
+	if (!i915_modparams.enable_rc6) {
+		DRM_DEBUG_DRIVER("force disble rc6\n");
+		return false;
+	}
 	if (!HAS_RC6(i915))
 		return false;
 

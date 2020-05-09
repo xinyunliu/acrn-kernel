@@ -269,6 +269,12 @@ i915_param_named_unsafe(enable_context_restore, bool, 0400,
 i915_param_named_unsafe(enable_opregion, bool, 0400,
 	"To togger using opregion feature(default:false)");
 
+i915_param_named_unsafe(enable_rc6, bool, 0600,
+	"enable rc6  "
+	"WARNING: Disabling this can cause system wide hangs. "
+	"(default: true)");
+
+
 i915_param_named(enable_hp_work, bool, 0400,
 	"To enable active the high-performance mode during vGPU busy(default:false)");
 
