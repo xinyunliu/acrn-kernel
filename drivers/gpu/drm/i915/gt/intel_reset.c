@@ -767,11 +767,15 @@ static void __intel_gt_set_wedged(struct intel_gt *gt)
 	intel_engine_mask_t awake;
 	enum intel_engine_id id;
 
-	if (test_bit(I915_WEDGED, &gt->reset.flags))
+	if (test_bit(I915_WEDGED, &gt->reset.flags)) {
+		GEM_TRACE("flags has WEDGED?! :%lx\n", gt->reset.flags);
 		return;
-
+	}
 	if (GEM_SHOW_DEBUG() && !intel_engines_are_idle(gt)) {
+
 		struct drm_printer p = drm_debug_printer(__func__);
+
+		GEM_TRACE("engines are not idle!! reset.flags:%lx\n", gt->reset.flags);
 
 		for_each_engine(engine, gt, id)
 			intel_engine_dump(engine, &p, "%s\n", engine->name);
