@@ -1108,12 +1108,20 @@ void intel_engine_flush_submission(struct intel_engine_cs *engine)
  */
 bool intel_engine_is_idle(struct intel_engine_cs *engine)
 {
+	bool result;
+	GEM_TRACE("\n");
 	/* More white lies, if wedged, hw state is inconsistent */
-	if (intel_gt_is_wedged(engine->gt))
-		return true;
+	if (intel_gt_is_wedged(engine->gt)) {
 
-	if (!intel_engine_pm_is_awake(engine))
+		GEM_TRACE(" wedge\n");
 		return true;
+	}
+
+	if (!intel_engine_pm_is_awake(engine)) {
+
+		GEM_TRACE(" parked\n");
+		return true;
+	}
 
 	/* Waiting to drain ELSP? */
 	if (execlists_active(&engine->execlists)) {
@@ -1121,16 +1129,25 @@ bool intel_engine_is_idle(struct intel_engine_cs *engine)
 
 		intel_engine_flush_submission(engine);
 
-		if (execlists_active(&engine->execlists))
+		if (execlists_active(&engine->execlists)) {
+
+			GEM_TRACE(" execlists is active\n");
 			return false;
+		}
 	}
 
 	/* ELSP is empty, but there are ready requests? E.g. after reset */
-	if (!RB_EMPTY_ROOT(&engine->execlists.queue.rb_root))
+	if (!RB_EMPTY_ROOT(&engine->execlists.queue.rb_root)) {
+
+		GEM_TRACE(" elsp is empty but got requests\n");
 		return false;
+	}
 
 	/* Ring stopped? */
-	return ring_is_idle(engine);
+	result = ring_is_idle(engine);
+	GEM_TRACE("ring id idle? %c\n", result ? 'Y': 'n');
+
+	return result;
 }
 
 bool intel_engines_are_idle(struct intel_gt *gt)
@@ -1142,18 +1159,27 @@ bool intel_engines_are_idle(struct intel_gt *gt)
 	 * If the driver is wedged, HW state may be very inconsistent and
 	 * report that it is still busy, even though we have stopped using it.
 	 */
-	if (intel_gt_is_wedged(gt))
+	if (intel_gt_is_wedged(gt)) {
+		GEM_TRACE(" reason: reset failed\n");
 		return true;
-
-	/* Already parked (and passed an idleness test); must still be idle */
-	if (!READ_ONCE(gt->awake))
-		return true;
-
-	for_each_engine(engine, gt, id) {
-		if (!intel_engine_is_idle(engine))
-			return false;
 	}
 
+	/* Already parked (and passed an idleness test); must still be idle */
+	if (!READ_ONCE(gt->awake)) {
+
+		GEM_TRACE(" reason: gt is parked\n");
+		return true;
+	}
+
+	for_each_engine(engine, gt, id) {
+		if (!intel_engine_is_idle(engine)) {
+
+		GEM_TRACE("engine is not idle\n");
+			return false;
+		}
+	}
+
+	GEM_TRACE("engines are idle\n");
 	return true;
 }
 

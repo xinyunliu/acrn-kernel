@@ -911,7 +911,7 @@ int intel_opregion_setup(struct drm_i915_private *dev_priv)
 
 	pci_read_config_dword(pdev, ASLS, &asls);
 	DRM_DEBUG_DRIVER("graphic opregion physical addr: 0x%x\n", asls);
-	DRM_DEBUG_DRIVER("enable_opregion: %c\n", i915_modparams.enable_opregion? 'Y':'N');
+	DRM_DEBUG_DRIVER("enable_opregion: %c\n", i915_modparams.enable_opregion ? 'Y':'N');
 	if (asls == 0 || !i915_modparams.enable_opregion) {
 		DRM_DEBUG_DRIVER("ACPI OpRegion not supported!\n");
 		return -ENOTSUPP;

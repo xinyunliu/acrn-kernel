@@ -466,7 +466,7 @@ static int gen8_engine_reset_prepare(struct intel_engine_cs *engine)
 	int ret;
 
 	ack = intel_uncore_read_fw(uncore, reg);
-	GEM_TRACE("gen8_engine_reset_prepare() ack=%x\n", ack);
+	GEM_TRACE("reg:0x%x ack=%x\n", reg.reg ,ack);
 	if (ack & RESET_CTL_CAT_ERROR) {
 		/*
 		 * For catastrophic errors, ready-for-reset sequence
@@ -475,13 +475,18 @@ static int gen8_engine_reset_prepare(struct intel_engine_cs *engine)
 		request = RESET_CTL_CAT_ERROR;
 		mask = RESET_CTL_CAT_ERROR;
 
+		GEM_TRACE(" ack:RESET_CTL_CAT_ERROR\n");
+
 		/* Catastrophic errors need to be cleared by HW */
 		ack = 0;
 	} else if (!(ack & RESET_CTL_READY_TO_RESET)) {
 		request = RESET_CTL_REQUEST_RESET;
 		mask = RESET_CTL_READY_TO_RESET;
 		ack = RESET_CTL_READY_TO_RESET;
+
+		GEM_TRACE(" ack: not RESET_CTL_READY_TO_RESET\n");
 	} else {
+		GEM_TRACE(" ack:  RESET_CTL_READY_TO_RESET\n");
 		return 0;
 	}
 
@@ -596,7 +601,7 @@ int __intel_gt_reset(struct intel_gt *gt, intel_engine_mask_t engine_mask)
 	 */
 	intel_uncore_forcewake_get(gt->uncore, FORCEWAKE_ALL);
 	for (retry = 0; ret == -ETIMEDOUT && retry < retries; retry++) {
-		GEM_TRACE("engine_mask=%x\n", engine_mask);
+		GEM_TRACE("retry: %d engine_mask=%x\n", retry, engine_mask);
 		preempt_disable();
 		ret = reset(gt, engine_mask, retry);
 		preempt_enable();
@@ -804,6 +809,7 @@ static void __intel_gt_set_wedged(struct intel_gt *gt)
 	 */
 	synchronize_rcu_expedited();
 	set_bit(I915_WEDGED, &gt->reset.flags);
+	GEM_TRACE(" set I915_WEDGED bit\n");
 
 	/* Mark all executing requests as skipped */
 	for_each_engine(engine, gt, id)
